@@ -1,0 +1,215 @@
+[x-cloak] {
+    display: none !important;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    min-height: 42px;
+    border-radius: 0.5rem;
+    border-color: rgb(209 213 219);
+    padding: 0.35rem 0.5rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.6rem;
+    color: rgb(31 41 55);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+    right: 0.5rem;
+}
+
+.ledger-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+}
+
+.ledger-nav-link {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: rgb(75 85 99);
+    transition: all 0.18s ease;
+}
+
+.ledger-nav-link:hover {
+    color: rgb(55 65 81);
+    background-color: rgb(243 244 246);
+}
+
+.ledger-nav-link.is-active {
+    color: rgb(55 48 163);
+    background-color: rgb(224 231 255);
+}
+
+.ledger-nav-separator {
+    width: 0.28rem;
+    height: 0.28rem;
+    border-radius: 9999px;
+    background-color: rgb(209 213 219);
+}
+
+.ledger-brand-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgb(224 231 255);
+    border-radius: 9999px;
+    padding: 0.45rem 0.95rem;
+    color: rgb(67 56 202);
+    background: linear-gradient(140deg, rgb(238 242 255) 0%, rgb(255 255 255) 100%);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.bs-date-picker .bs-calendar-panel {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    left: 0;
+    z-index: 70;
+    width: min(21rem, calc(100vw - 3rem));
+    border-radius: 0.95rem;
+    border: 1px solid rgb(226 232 240);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+    padding: 0.85rem;
+}
+
+.bs-date-picker .bs-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    margin-bottom: 0.8rem;
+}
+
+.bs-date-picker .bs-calendar-selectors {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
+.bs-date-picker .bs-calendar-select {
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.65rem;
+    background: #fff;
+    padding: 0.38rem 0.5rem;
+    font-size: 0.78rem;
+    color: rgb(51 65 85);
+}
+
+.bs-date-picker .bs-calendar-select:focus {
+    outline: none;
+    border-color: rgb(99 102 241);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.bs-date-picker .bs-calendar-nav {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid rgb(203 213 225);
+    border-radius: 999px;
+    background: #fff;
+    color: rgb(71 85 105);
+    font-size: 1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.bs-date-picker .bs-calendar-nav:hover {
+    border-color: rgb(99 102 241);
+    color: rgb(79 70 229);
+    background: rgb(238 242 255);
+}
+
+.bs-date-picker .bs-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.bs-date-picker .bs-calendar-weekday {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    color: rgb(100 116 139);
+    padding-bottom: 0.1rem;
+}
+
+.bs-date-picker .bs-calendar-day {
+    border: 1px solid transparent;
+    border-radius: 0.62rem;
+    min-height: 2rem;
+    font-size: 0.8rem;
+    color: rgb(51 65 85);
+    background: transparent;
+    transition: all 0.15s ease;
+}
+
+.bs-date-picker .bs-calendar-day:not(.is-empty):hover {
+    border-color: rgb(165 180 252);
+    background: rgb(238 242 255);
+    color: rgb(67 56 202);
+}
+
+.bs-date-picker .bs-calendar-day.is-empty {
+    cursor: default;
+    color: transparent;
+}
+
+.bs-date-picker .bs-calendar-day.is-today {
+    border-color: rgb(99 102 241);
+    background: rgb(238 242 255);
+    color: rgb(67 56 202);
+    font-weight: 600;
+}
+
+.bs-date-picker .bs-calendar-day.is-selected {
+    border-color: rgb(67 56 202);
+    background: rgb(79 70 229);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(79, 70, 229, 0.35);
+}
+
+.bs-date-picker .bs-calendar-footer {
+    margin-top: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bs-date-picker .bs-calendar-link {
+    border: none;
+    background: none;
+    padding: 0.2rem 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgb(79 70 229);
+    transition: color 0.15s ease;
+}
+
+.bs-date-picker .bs-calendar-link:hover {
+    color: rgb(55 48 163);
+}
+
+@media (max-width: 640px) {
+    .bs-date-picker .bs-calendar-panel {
+        width: min(21rem, calc(100vw - 2.5rem));
+    }
+}

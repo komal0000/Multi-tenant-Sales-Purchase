@@ -1,0 +1,109 @@
+@extends('layouts.app')
+
+@section('content')
+    <div class="space-y-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900 sm:text-3xl">Sales</h1>
+                <p class="text-sm text-gray-500">Bills are immutable. Search by Nepali date range and party.</p>
+            </div>
+            <a href="{{ route('sales.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Sale</a>
+        </div>
+
+        <form method="GET" action="{{ route('sales.index') }}" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+            <div>
+                <div class="flex items-center justify-between">
+                    <label for="sales-filter-party-select" class="block text-sm font-medium text-gray-700">Party</label>
+                    <button type="button" data-open-quick-party-entry data-party-select-id="sales-filter-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>
+                </div>
+                <select id="sales-filter-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <option value="">All parties</option>
+                    @foreach ($parties as $party)
+                        <option value="{{ $party->id }}" @selected(($filters['party_id'] ?? null) === $party->id)>{{ $party->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @include('partials.bs-date-selector', ['name' => 'from_date_bs', 'label' => 'From BS Date', 'value' => $filters['from_date_bs'] ?? null])
+            @include('partials.bs-date-selector', ['name' => 'to_date_bs', 'label' => 'To BS Date', 'value' => $filters['to_date_bs'] ?? null])
+            <div class="flex items-center gap-3 md:pb-0.5">
+                <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>
+                <a href="{{ route('sales.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</a>
+            </div>
+        </form>
+
+        <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:block">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-500">
+                        <tr>
+                            <th class="px-5 py-4 text-left">Party</th>
+                            <th class="px-5 py-4 text-right">Total</th>
+                            <th class="px-5 py-4 text-right">Received</th>
+                            <th class="px-5 py-4 text-left">AD Date</th>
+                            <th class="px-5 py-4 text-left">BS Date</th>
+                            <th class="px-5 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($sales as $sale)
+                            <tr class="border-t border-gray-100 hover:bg-gray-50/80">
+                                <td class="px-5 py-4 font-medium text-gray-900"><a href="{{ route('sales.show', $sale) }}" class="hover:text-indigo-600">{{ $sale->party->name }}</a></td>
+                                <td class="px-5 py-4 text-right font-mono font-semibold text-indigo-700">{{ number_format($sale->total, 2) }}</td>
+                                <td class="px-5 py-4 text-right font-mono {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">{{ number_format($sale->received_amount, 2) }}</td>
+                                <td class="px-5 py-4 text-gray-500">{{ $sale->created_at->format('d M Y') }}</td>
+                                <td class="px-5 py-4 text-gray-500">{{ $sale->created_at_bs }}</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center justify-end gap-4">
+                                        <a href="{{ route('sales.show', $sale) }}" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
+                                        <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="text-sm text-green-600 hover:text-green-700">Payment</a>
+                                        <form action="{{ route('sales.destroy', $sale) }}" method="POST" onsubmit="return confirm('Delete this sale? The ledger entry will remain for audit history.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-sm text-red-500 hover:text-red-700">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-5 py-12 text-center text-gray-500">
+                                    {{ $hasSearched ? 'No sales found.' : 'Use filters and click Search to load sales.' }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="space-y-3 md:hidden">
+            @forelse ($sales as $sale)
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <a href="{{ route('sales.show', $sale) }}" class="font-semibold text-gray-900">{{ $sale->party->name }}</a>
+                            <p class="mt-1 text-sm text-gray-500">AD {{ $sale->created_at->format('d M Y') }}</p>
+                            <p class="text-xs text-gray-400">BS {{ $sale->created_at_bs }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-sm font-semibold text-indigo-700">{{ number_format($sale->total, 2) }}</div>
+                            <div class="mt-1 font-mono text-xs {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">Paid {{ number_format($sale->received_amount, 2) }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
+                        <a href="{{ route('sales.show', $sale) }}" class="font-medium text-indigo-600">View Bill</a>
+                        <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="font-medium text-green-600">Add Payment</a>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+                    {{ $hasSearched ? 'No sales found.' : 'Use filters and tap Search to load sales.' }}
+                </div>
+            @endforelse
+        </div>
+
+        @if ($hasSearched)
+            {{ $sales->links() }}
+        @endif
+    </div>
+@endsection

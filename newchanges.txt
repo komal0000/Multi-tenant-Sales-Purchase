@@ -1,0 +1,12 @@
+add items table
+id,name,qty,rate ,cost_price
+add item_ledgers
+id,item_id,type<in out>,rate <cost price> on each sales and purchase,identifier <source>,foreign_key <source id>
+sales bill item will be generailize <custom particular> or itemwise with_item_id
+
+add expense_categories table multi level
+id,name,parent_id
+
+purchase bill item will be generailize <custom particular> or itemwise with_item_id or expense wise with expense category id
+
+maintain item_ledger as source of qty

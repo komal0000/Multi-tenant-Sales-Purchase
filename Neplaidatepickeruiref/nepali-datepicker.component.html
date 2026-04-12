@@ -1,0 +1,68 @@
+<div class="datepicker-wrapper">
+  <input
+    [ngClass]="{'form-control':true}"
+    #dialogInput
+    [value]="displayDate"
+    (click)="openDialog()"
+    (focus)="openDialog()"
+    (input)="valueChanged($event)"
+    (keydown)="handleKeydown($event)"
+    maxlength="10"
+    [disabled]="disabled"
+    placeholder="Select date">
+
+  <div class="date-dialog"  #dialogEl *ngIf="dialogShown" [style.top]="dialogPosition.top" >
+    <div class="dialog-content">
+      <div class="calendar-header">
+        <div class="navigation">
+          <button type="button" tabindex="-1" (click)="prevMonth($event)">&lt;</button>
+        </div>
+        <div class="selectors">
+          <select [(ngModel)]="currentYear" (change)="generateCalendar()" tabindex="-1">
+            @for (year of years; track year) {
+              <option [value]="year">{{ year }}</option>
+            }
+          </select>
+          <select [(ngModel)]="currentMonth" (change)="generateCalendar()" tabindex="-1">
+            @for (month of months; track month;let  i = $index) {
+              <option [value]="i+1">{{ month }}</option>
+            }
+          </select>
+
+        </div>
+
+        <div class="navigation">
+          <button type="button" tabindex="-1" (click)="nextMonth($event)" >&gt;</button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            @for (day of daysOfWeek; track day) {
+              <th>{{ day }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (week of calendarDays; track $index) {
+            <tr>
+              @for (day of week; track $index) {
+                <td
+                  [class.today]="isToday(day)"
+                  [class.selected]="isSelected(day)"
+                  (click)="selectDate(day)">
+                  {{ day || '' }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="dialog-actions">
+        <button type="button"  tabindex="-1" (click)="closeDialog()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

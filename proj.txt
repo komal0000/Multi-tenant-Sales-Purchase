@@ -1,0 +1,268 @@
+📘 PROJECT DOCUMENT
+Sales, Purchase & Ledger System (Laravel + MySQL)
+🎯 OBJECTIVE
+
+Build a single-business accounting system with:
+
+Parties (no customer/supplier separation)
+Sales bills (manual item entry)
+Purchase bills (manual item entry)
+Payments (linked or advance)
+Cash & Bank accounts
+Ledger-based balance system
+🧠 CORE PRINCIPLE (MOST IMPORTANT)
+
+✅ Ledger is the only source of truth
+❌ Never store or manually update balance
+✅ All balances must be calculated from ledger
+
+🧱 MODULES
+Parties
+Sales
+Purchases
+Payments
+Accounts (Cash/Bank)
+Ledger
+🧩 DATABASE SCHEMA
+1. Parties
+
+Purpose: Store all people/entities
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+name
+phone (optional)
+created_at
+updated_at
+2. Accounts (Cash / Bank)
+
+Purpose: Store money locations
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+name (Cash, Bank, etc.)
+type (cash / bank)
+created_at
+updated_at
+3. Sales
+
+Purpose: Sales bills
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+party_id
+total
+created_at
+updated_at
+deleted_at (soft delete)
+4. Sale Items (MANUAL ENTRY)
+
+👉 No item_id — everything typed manually
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+sale_id
+particular (text description)
+qty
+price
+total
+
+Rule:
+
+total = qty × price
+
+5. Purchases
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+party_id
+total
+created_at
+updated_at
+deleted_at
+6. Purchase Items (MANUAL ENTRY)
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+purchase_id
+particular (text)
+qty
+price
+total
+7. Payments
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+party_id
+amount
+type (received / given)
+account_id (cash/bank)
+sale_id (nullable)
+purchase_id (nullable)
+
+Rules:
+
+Only ONE of sale_id or purchase_id should be filled
+Both NULL = advance payment
+created_at
+🔥 8. Ledger (CORE TABLE)
+
+Fields:
+
+id (BIGINT AUTO INCREMENT)
+party_id (nullable)
+account_id (nullable)
+
+👉 Only ONE must be filled
+
+dr_amount
+cr_amount
+
+👉 Only one should be > 0
+
+type (sale / purchase / payment)
+ref_id
+ref_table
+created_at
+⚠️ LEDGER RULES (STRICT)
+Each ledger row affects only ONE entity:
+Either party OR account
+Never fill both party_id and account_id
+Never leave both empty
+Only one of:
+dr_amount OR cr_amount must be filled
+Ledger entries must NEVER be deleted
+Every transaction must create ledger entries
+📊 ACCOUNTING RULES (DR / CR)
+For Party
+Situation	DR	CR
+Party owes you	✔
+You owe party		✔
+Payment received		✔
+Payment given	✔
+For Cash / Bank
+Situation	DR	CR
+Money comes in	✔
+Money goes out		✔
+🧾 TRANSACTION FLOWS
+1. SALE
+
+Meaning:
+
+Party buys from you → they owe you
+
+Ledger:
+
+party_id filled
+DR = total
+CR = 0
+2. PURCHASE
+
+Meaning:
+
+You buy from party → you owe them
+
+Ledger:
+
+party_id filled
+DR = 0
+CR = total
+3. PAYMENT RECEIVED
+
+Meaning:
+
+Party pays you
+
+Create 2 ledger entries:
+
+Party:
+CR = amount
+Account:
+DR = amount
+4. PAYMENT GIVEN
+
+Meaning:
+
+You pay party
+
+Create 2 entries:
+
+Party:
+DR = amount
+Account:
+CR = amount
+🔗 PAYMENT LINKING RULES
+If payment is for a sale → set sale_id
+If for purchase → set purchase_id
+If advance → both NULL
+📦 BILL RULES
+Sales & Purchases
+Must contain at least 1 item
+Each item:
+qty × price = total
+Bill total:
+sum of all item totals
+📊 BALANCE CALCULATION
+Party Balance
+Balance = SUM(DR) - SUM(CR)
+
+Meaning:
+
+Positive → party owes you
+Negative → you owe party
+Account Balance
+Balance = SUM(DR) - SUM(CR)
+🔄 DELETE & UPDATE RULES
+Sales / Purchases
+Use soft delete (deleted_at)
+DO NOT delete ledger
+Payments
+Must reverse ledger entries
+
+Options:
+
+Delete related ledger rows
+OR create reverse entries (recommended)
+🧪 TEST CASES (MANDATORY)
+Case 1:
+
+Sale = 1000
+→ Party balance = +1000
+
+Case 2:
+
+Payment received = 400
+→ Party = +600
+→ Cash = +400
+
+Case 3:
+
+Purchase = 500
+→ Party = -500
+
+Case 4:
+
+Payment given = 200
+→ Party = -300
+→ Cash = -200
+
+⚠️ STRICT DEVELOPMENT RULES
+
+❌ Do NOT store balance column
+❌ Do NOT update balance manually
+❌ Do NOT skip ledger
+❌ Do NOT hard delete
+❌ Do NOT mix party + account in same ledger
+
+🧠 DESIGN GUIDELINES
+Use normal auto-increment IDs everywhere
+Use database transactions for every operation
+Keep ledger logic simple
+Always track reference (ref_id + ref_table)
