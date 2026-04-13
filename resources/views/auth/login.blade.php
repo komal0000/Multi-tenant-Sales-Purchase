@@ -24,6 +24,14 @@
                         <p class="text-sm uppercase tracking-[0.2em] text-indigo-600">Welcome back</p>
                         <h2 class="mt-2 text-2xl font-semibold text-slate-900">Sign in to LedgerApp</h2>
                         <p class="mt-2 text-sm text-slate-500">Use your phone number username to access the system.</p>
+                        <div class="mt-4">
+                            <a
+                                href="{{ route('register') }}"
+                                class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                            >
+                                New here? Create account
+                            </a>
+                        </div>
                     </div>
 
                     @if ($errors->any())
@@ -75,6 +83,11 @@
                         <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                             Login
                         </button>
+
+                        <p class="text-center text-sm text-slate-600">
+                            Need a new workspace?
+                            <a href="{{ route('register') }}" class="font-semibold text-indigo-700 hover:text-indigo-800">Register now</a>
+                        </p>
                     </form>
                 </section>
             </div>

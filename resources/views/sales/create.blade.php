@@ -85,7 +85,10 @@
 
             <div class="rounded-xl border border-gray-300 bg-white shadow-sm">
                 <div class="border-b border-gray-300 px-4 py-3">
-                    <h2 class="font-semibold text-gray-900">Line Items</h2>
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="font-semibold text-gray-900">Line Items</h2>
+                        <a href="{{ route('items.index') }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">Manage Items</a>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-12 gap-2 border-b border-gray-300 bg-gray-50 px-4 py-3">

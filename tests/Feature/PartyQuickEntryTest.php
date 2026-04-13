@@ -136,6 +136,10 @@ class PartyQuickEntryTest extends TestCase
             ->assertOk()
             ->assertSee('id="party-inline-entry-row"', false)
             ->assertSee('id="party-inline-name"', false)
+            ->assertSee('id="party-inline-opening-balance"', false)
+            ->assertSee('id="party-inline-opening-balance-side"', false)
+            ->assertSee('Receivable', false)
+            ->assertSee('Payable', false)
             ->assertSee('id="party-inline-save"', false)
             ->assertSee('data-party-post-save="reload"', false);
     }

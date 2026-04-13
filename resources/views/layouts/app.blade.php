@@ -21,6 +21,8 @@
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard'],
             ['label' => 'Parties', 'route' => 'parties.index', 'active' => 'parties.*'],
             ['label' => 'Accounts', 'route' => 'accounts.index', 'active' => 'accounts.*'],
+            ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*'],
+            ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'active' => 'expense-categories.*'],
             ['label' => 'Employees', 'route' => 'employees.index', 'active' => 'employees.*'],
             ['label' => 'Sales', 'route' => 'sales.index', 'active' => 'sales.*'],
             ['label' => 'Purchases', 'route' => 'purchases.index', 'active' => 'purchases.*'],

@@ -61,7 +61,26 @@
                                     autocomplete="off"
                                 >
                             </td>
-                            <td class="px-5 py-3 text-right font-mono font-semibold text-gray-500">0.00</td>
+                            <td class="px-5 py-3">
+                                <div class="grid gap-2">
+                                    <input
+                                        id="party-inline-opening-balance"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value="0"
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                        placeholder="Opening balance"
+                                    >
+                                    <select
+                                        id="party-inline-opening-balance-side"
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                    >
+                                        <option value="dr" selected>Receivable</option>
+                                        <option value="cr">Payable</option>
+                                    </select>
+                                </div>
+                            </td>
                             <td class="px-5 py-3">
                                 <div class="flex items-center justify-end">
                                     <button
@@ -148,11 +167,13 @@
             const nameInput = document.getElementById('party-inline-name');
             const phoneInput = document.getElementById('party-inline-phone');
             const addressInput = document.getElementById('party-inline-address');
+            const openingBalanceInput = document.getElementById('party-inline-opening-balance');
+            const openingBalanceSideSelect = document.getElementById('party-inline-opening-balance-side');
             const saveButton = document.getElementById('party-inline-save');
             const errorRow = document.getElementById('party-inline-error-row');
             const errorList = document.getElementById('party-inline-errors');
 
-            if (!tableBody || !nameInput || !phoneInput || !addressInput || !saveButton || !errorRow || !errorList) {
+            if (!tableBody || !nameInput || !phoneInput || !addressInput || !openingBalanceInput || !openingBalanceSideSelect || !saveButton || !errorRow || !errorList) {
                 return;
             }
 
@@ -224,6 +245,8 @@
                 nameInput.disabled = saving;
                 phoneInput.disabled = saving;
                 addressInput.disabled = saving;
+                openingBalanceInput.disabled = saving;
+                openingBalanceSideSelect.disabled = saving;
                 saveButton.textContent = saving ? 'Saving...' : 'Save';
             }
 
@@ -231,6 +254,8 @@
                 nameInput.value = '';
                 phoneInput.value = '';
                 addressInput.value = '';
+                openingBalanceInput.value = '0';
+                openingBalanceSideSelect.value = 'dr';
             }
 
             function normalizePhoneInput(value) {
@@ -308,10 +333,18 @@
                 const name = nameInput.value.trim();
                 const phone = normalizePhoneInput(phoneInput.value);
                 const address = addressInput.value.trim();
+                const openingBalance = Number(openingBalanceInput.value || 0);
+                const openingBalanceSide = openingBalanceSideSelect.value === 'cr' ? 'cr' : 'dr';
 
                 if (!name) {
                     renderErrors({ name: ['Name is required.'] });
                     nameInput.focus();
+                    return;
+                }
+
+                if (Number.isNaN(openingBalance) || openingBalance < 0) {
+                    renderErrors({ opening_balance: ['Opening balance must be zero or positive.'] });
+                    openingBalanceInput.focus();
                     return;
                 }
 
@@ -326,6 +359,9 @@
                 if (address) {
                     formData.append('address', address);
                 }
+
+                formData.append('opening_balance', String(openingBalance));
+                formData.append('opening_balance_side', openingBalanceSide);
 
                 setSavingState(true);
                 shouldFocusNameAfterSave = false;

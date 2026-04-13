@@ -35,15 +35,15 @@
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-sm text-gray-500">Opening Balance</p>
                 <p class="mt-2 font-mono text-xl font-semibold {{ $openingBalance >= 0 ? 'text-green-600' : 'text-red-500' }}">
-                    {{ number_format(abs($openingBalance), 2) }} {{ $openingBalance >= 0 ? 'DR' : 'CR' }}
+                    {{ number_format(abs($openingBalance), 2) }} {{ $openingBalance >= 0 ? 'Receivable' : 'Payable' }}
                 </p>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-sm text-gray-500">Period Debit</p>
+                <p class="text-sm text-gray-500">Period Receivable</p>
                 <p class="mt-2 font-mono text-xl font-semibold text-blue-600">{{ number_format($periodDebit, 2) }}</p>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-sm text-gray-500">Period Credit</p>
+                <p class="text-sm text-gray-500">Period Payable</p>
                 <p class="mt-2 font-mono text-xl font-semibold text-orange-500">{{ number_format($periodCredit, 2) }}</p>
             </div>
         </div>
@@ -56,8 +56,8 @@
                             <th class="px-4 py-3 text-left">Date</th>
                             <th class="px-4 py-3 text-left">Type</th>
                             <th class="px-4 py-3 text-left">Reference</th>
-                            <th class="px-4 py-3 text-right text-blue-600">DR</th>
-                            <th class="px-4 py-3 text-right text-orange-500">CR</th>
+                            <th class="px-4 py-3 text-right text-blue-600">Receivable</th>
+                            <th class="px-4 py-3 text-right text-orange-500">Payable</th>
                             <th class="px-4 py-3 text-right">Running Balance</th>
                         </tr>
                     </thead>
@@ -71,7 +71,7 @@
                                 <td class="px-4 py-3 text-xs text-gray-500">{{ $row->reference_text ?? ($row->ref_table . ' / ' . $row->ref_id) }}</td>
                                 <td class="px-4 py-3 text-right text-blue-600">{{ $row->dr_amount > 0 ? number_format($row->dr_amount, 2) : '—' }}</td>
                                 <td class="px-4 py-3 text-right text-orange-500">{{ $row->cr_amount > 0 ? number_format($row->cr_amount, 2) : '—' }}</td>
-                                <td class="px-4 py-3 text-right font-semibold {{ $running >= 0 ? 'text-green-600' : 'text-red-500' }}">{{ number_format(abs($running), 2) }} {{ $running >= 0 ? 'DR' : 'CR' }}</td>
+                                <td class="px-4 py-3 text-right font-semibold {{ $running >= 0 ? 'text-green-600' : 'text-red-500' }}">{{ number_format(abs($running), 2) }} {{ $running >= 0 ? 'Receivable' : 'Payable' }}</td>
                             </tr>
                         @empty
                             <tr>

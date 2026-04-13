@@ -28,7 +28,7 @@
             <div class="mt-4 rounded-lg bg-gray-50 p-4">
                 <p class="text-sm text-gray-500">Opening Balance</p>
                 <p class="mt-1 text-xl font-semibold {{ $openingBalanceSigned >= 0 ? 'text-green-600' : 'text-red-500' }}">
-                    {{ number_format(abs($openingBalanceSigned), 2) }} {{ $openingBalanceSigned >= 0 ? 'DR' : 'CR' }}
+                    {{ number_format(abs($openingBalanceSigned), 2) }} {{ $openingBalanceSigned >= 0 ? 'Receivable' : 'Payable' }}
                 </p>
             </div>
             <form method="POST" action="{{ route('parties.opening-balance.update', $party) }}" class="mt-4 rounded-lg border border-gray-200 p-4">
@@ -41,10 +41,10 @@
                         <input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="{{ old('opening_balance', $party->opening_balance ?? 0) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label for="opening_balance_side" class="block text-xs font-medium text-gray-600">Side</label>
+                        <label for="opening_balance_side" class="block text-xs font-medium text-gray-600">Balance Type</label>
                         <select id="opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                            <option value="dr" @selected(old('opening_balance_side', $party->opening_balance_side ?? 'dr') === 'dr')>DR</option>
-                            <option value="cr" @selected(old('opening_balance_side', $party->opening_balance_side ?? 'dr') === 'cr')>CR</option>
+                            <option value="dr" @selected(old('opening_balance_side', $party->opening_balance_side ?? 'dr') === 'dr')>Receivable</option>
+                            <option value="cr" @selected(old('opening_balance_side', $party->opening_balance_side ?? 'dr') === 'cr')>Payable</option>
                         </select>
                     </div>
                 </div>

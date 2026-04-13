@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Account;
 use App\Models\Employee;
 use App\Models\EmployeeSalary;
+use App\Models\ExpenseCategory;
+use App\Models\Item;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Purchase;
@@ -70,6 +72,46 @@ class PolicyAuthorizationTest extends TestCase
     }
 
     /**
+     * @dataProvider classOnlyPolicyProvider
+     */
+    public function test_class_only_policies_require_tenant_on_user(string $modelClass): void
+    {
+        $userWithTenant = new User(['tenant_id' => 10, 'role' => 1]);
+        $userWithoutTenant = new User(['tenant_id' => null, 'role' => 1]);
+
+        $this->assertTrue(Gate::forUser($userWithTenant)->allows('viewAny', $modelClass));
+        $this->assertTrue(Gate::forUser($userWithTenant)->allows('create', $modelClass));
+
+        $this->assertFalse(Gate::forUser($userWithoutTenant)->allows('viewAny', $modelClass));
+        $this->assertFalse(Gate::forUser($userWithoutTenant)->allows('create', $modelClass));
+    }
+
+    /**
+     * @dataProvider classOnlyPolicyProvider
+     */
+    public function test_class_only_model_policies_require_same_tenant(string $modelClass): void
+    {
+        $resource = new $modelClass();
+        $resource->tenant_id = 10;
+
+        $sameTenantUser = new User(['tenant_id' => 10, 'role' => 1]);
+        $otherTenantUser = new User(['tenant_id' => 11, 'role' => 1]);
+        $noTenantUser = new User(['tenant_id' => null, 'role' => 1]);
+
+        $this->assertTrue(Gate::forUser($sameTenantUser)->allows('view', $resource));
+        $this->assertTrue(Gate::forUser($sameTenantUser)->allows('update', $resource));
+        $this->assertTrue(Gate::forUser($sameTenantUser)->allows('delete', $resource));
+
+        $this->assertFalse(Gate::forUser($otherTenantUser)->allows('view', $resource));
+        $this->assertFalse(Gate::forUser($otherTenantUser)->allows('update', $resource));
+        $this->assertFalse(Gate::forUser($otherTenantUser)->allows('delete', $resource));
+
+        $this->assertFalse(Gate::forUser($noTenantUser)->allows('view', $resource));
+        $this->assertFalse(Gate::forUser($noTenantUser)->allows('update', $resource));
+        $this->assertFalse(Gate::forUser($noTenantUser)->allows('delete', $resource));
+    }
+
+    /**
      * @return array<string, array{0: class-string}>
      */
     public static function policyModelProvider(): array
@@ -82,6 +124,17 @@ class PolicyAuthorizationTest extends TestCase
             'payment' => [Payment::class],
             'purchase' => [Purchase::class],
             'sale' => [Sale::class],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: class-string}>
+     */
+    public static function classOnlyPolicyProvider(): array
+    {
+        return [
+            'item' => [Item::class],
+            'expense-category' => [ExpenseCategory::class],
         ];
     }
 }

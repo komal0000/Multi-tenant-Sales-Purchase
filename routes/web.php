@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeSalaryController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PurchaseController;
@@ -18,6 +21,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('login.store');
+
+    Route::get('/register', [RegisterController::class, 'create'])->name('register');
+    Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 });
 
 Route::middleware(['auth', 'tenant'])->group(function () {
@@ -50,6 +56,11 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::resource('accounts', AccountController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('accounts/{account}/ledger', [AccountController::class, 'ledgerStatement'])->name('accounts.ledger');
     Route::patch('accounts/{account}/opening-balance', [AccountController::class, 'updateOpeningBalance'])->name('accounts.opening-balance.update');
+
+    Route::resource('items', ItemController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
+    Route::resource('expense-categories', ExpenseCategoryController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
+    Route::get('expense-categories/tree', [ExpenseCategoryController::class, 'getCategoryTree'])
+        ->name('expense-categories.tree');
 
     Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'show']);
 
