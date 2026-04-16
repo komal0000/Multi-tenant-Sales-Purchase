@@ -35,7 +35,7 @@ class ReportController extends Controller
         ]);
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -65,14 +65,14 @@ class ReportController extends Controller
             $openingBase = $this->openingBalanceBase($cashAccounts, $selectedAccountId);
 
             $openingBalance = $openingBase + ((clone $query)
-                ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '<', $fromAd))
+                ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
                 ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
                 ->value('balance') ?? 0);
 
             $ledgerRows = (clone $query)
-                ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '>=', $fromAd))
-                ->when($toAd, fn ($builder) => $builder->whereDate('created_at', '<=', $toAd))
-                ->orderBy('created_at')
+                ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))
+                ->when($toBsInt, fn ($builder) => $builder->where('date', '<=', $toBsInt))
+                ->orderBy('date')
                 ->orderBy('id')
                 ->get();
         } else {
@@ -131,7 +131,7 @@ class ReportController extends Controller
 
         if ($hasSearched) {
             try {
-                [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($fromBs, $toBs);
+                [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($fromBs, $toBs);
             } catch (Throwable $exception) {
                 throw ValidationException::withMessages([
                     'from_date_bs' => $exception->getMessage(),
@@ -141,15 +141,15 @@ class ReportController extends Controller
 
             $salesTotal = (float) Ledger::query()
                 ->where('type', 'sale')
-                ->whereDate('created_at', '>=', $fromAd)
-                ->whereDate('created_at', '<=', $toAd)
+                ->where('date', '>=', $fromBsInt)
+                ->where('date', '<=', $toBsInt)
                 ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as total')
                 ->value('total');
 
             $purchaseTotal = (float) Ledger::query()
                 ->where('type', 'purchase')
-                ->whereDate('created_at', '>=', $fromAd)
-                ->whereDate('created_at', '<=', $toAd)
+                ->where('date', '>=', $fromBsInt)
+                ->where('date', '<=', $toBsInt)
                 ->selectRaw('COALESCE(SUM(cr_amount) - SUM(dr_amount), 0) as total')
                 ->value('total');
 
@@ -158,23 +158,23 @@ class ReportController extends Controller
             $salesDetails = Sale::query()
                 ->with('party:id,name')
                 ->where('status', Sale::STATUS_ACTIVE)
-                ->whereDate('created_at', '>=', $fromAd)
-                ->whereDate('created_at', '<=', $toAd)
-                ->orderByDesc('created_at')
+                ->where('date', '>=', $fromBsInt)
+                ->where('date', '<=', $toBsInt)
+                ->orderByDesc('date')
                 ->orderByDesc('id')
                 ->get();
 
             $purchaseDetails = Purchase::query()
                 ->with('party:id,name')
                 ->where('status', Purchase::STATUS_ACTIVE)
-                ->whereDate('created_at', '>=', $fromAd)
-                ->whereDate('created_at', '<=', $toAd)
-                ->orderByDesc('created_at')
+                ->where('date', '>=', $fromBsInt)
+                ->where('date', '<=', $toBsInt)
+                ->orderByDesc('date')
                 ->orderByDesc('id')
                 ->get();
 
-            $salesDetails->each(fn (Sale $sale) => $sale->created_at_bs = DateHelper::adToBs($sale->created_at));
-            $purchaseDetails->each(fn (Purchase $purchase) => $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at));
+            $salesDetails->each(fn (Sale $sale) => $sale->created_at_bs = DateHelper::fromDateInt((int) $sale->date));
+            $purchaseDetails->each(fn (Purchase $purchase) => $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date));
         } else {
             $salesTotal = 0;
             $purchaseTotal = 0;
@@ -226,13 +226,13 @@ class ReportController extends Controller
                 ->with(['party:id,name,phone', 'items.item:id,name'])
                 ->where('status', Sale::STATUS_ACTIVE)
                 ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
-                ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
-                ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
-                ->orderByDesc('created_at')
+                ->when($resolved['from_int'], fn ($query, $fromInt) => $query->where('date', '>=', $fromInt))
+                ->when($resolved['to_int'], fn ($query, $toInt) => $query->where('date', '<=', $toInt))
+                ->orderByDesc('date')
                 ->orderByDesc('id')
                 ->get();
 
-            $sales->each(fn (Sale $sale) => $sale->created_at_bs = DateHelper::adToBs($sale->created_at));
+            $sales->each(fn (Sale $sale) => $sale->created_at_bs = DateHelper::fromDateInt((int) $sale->date));
 
             $summary = $this->buildReportSummary($sales, false);
             $dateWiseRows = $this->buildDateWiseRows($sales, false);
@@ -284,13 +284,13 @@ class ReportController extends Controller
                 ->with(['party:id,name,phone', 'items.item:id,name', 'items.expenseCategory:id,name'])
                 ->where('status', Purchase::STATUS_ACTIVE)
                 ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
-                ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
-                ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
-                ->orderByDesc('created_at')
+                ->when($resolved['from_int'], fn ($query, $fromInt) => $query->where('date', '>=', $fromInt))
+                ->when($resolved['to_int'], fn ($query, $toInt) => $query->where('date', '<=', $toInt))
+                ->orderByDesc('date')
                 ->orderByDesc('id')
                 ->get();
 
-            $purchases->each(fn (Purchase $purchase) => $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at));
+            $purchases->each(fn (Purchase $purchase) => $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date));
 
             $summary = $this->buildReportSummary($purchases, true);
             $dateWiseRows = $this->buildDateWiseRows($purchases, true);
@@ -467,8 +467,8 @@ class ReportController extends Controller
      *   party_id: int|null,
      *   from_bs: string,
      *   to_bs: string,
-     *   from_ad: string|null,
-     *   to_ad: string|null,
+     *   from_int: int|null,
+     *   to_int: int|null,
      *   hasSearched: bool
      * }
      */
@@ -491,12 +491,12 @@ class ReportController extends Controller
         $fromBs = $filters['from_date_bs'] ?? $startBs;
         $toBs = $filters['to_date_bs'] ?? $todayBs;
 
-        $fromAd = null;
-        $toAd = null;
+        $fromInt = null;
+        $toInt = null;
 
         if ($hasSearched) {
             try {
-                [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($fromBs, $toBs);
+                [$fromInt, $toInt] = DateHelper::getBsIntRangeFromFilters($fromBs, $toBs);
             } catch (Throwable $exception) {
                 throw ValidationException::withMessages([
                     'from_date_bs' => $exception->getMessage(),
@@ -509,8 +509,8 @@ class ReportController extends Controller
             'party_id' => isset($filters['party_id']) ? (int) $filters['party_id'] : null,
             'from_bs' => $fromBs,
             'to_bs' => $toBs,
-            'from_ad' => $fromAd,
-            'to_ad' => $toAd,
+            'from_int' => $fromInt,
+            'to_int' => $toInt,
             'hasSearched' => $hasSearched,
         ];
     }
@@ -544,14 +544,14 @@ class ReportController extends Controller
     private function buildDateWiseRows(Collection $bills, bool $includeExpense): array
     {
         return $bills
-            ->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))
-            ->map(function (Collection $dateBills, string $dateAd) use ($includeExpense): array {
+            ->groupBy(fn ($bill) => (int) $bill->date)
+            ->map(function (Collection $dateBills, int $dateInt) use ($includeExpense): array {
                 $lineItems = $dateBills->flatMap(fn ($bill) => $bill->items);
                 $breakdown = $this->buildLineBreakdown($lineItems, $includeExpense);
 
                 return [
-                    'date_ad' => $dateAd,
-                    'date_bs' => DateHelper::adToBs($dateAd),
+                    'date_bs' => DateHelper::fromDateInt($dateInt),
+                    'date_ad' => '',
                     'bill_count' => $dateBills->count(),
                     'party_count' => $dateBills->pluck('party_id')->filter()->unique()->count(),
                     'total_amount' => (float) $dateBills->sum(fn ($bill) => (float) $bill->total),
@@ -560,7 +560,7 @@ class ReportController extends Controller
                     'expense_wise' => $breakdown['expense_wise'],
                 ];
             })
-            ->sortByDesc('date_ad')
+            ->sortByDesc('date_bs')
             ->values()
             ->all();
     }
@@ -583,7 +583,7 @@ class ReportController extends Controller
                     'party_name' => $party?->name ?? 'Unknown Party',
                     'party_phone' => $party?->phone,
                     'bill_count' => $partyBills->count(),
-                    'date_count' => $partyBills->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))->count(),
+                    'date_count' => $partyBills->groupBy(fn ($bill) => (int) $bill->date)->count(),
                     'total_amount' => (float) $partyBills->sum(fn ($bill) => (float) $bill->total),
                     'generalized' => $breakdown['generalized'],
                     'item_wise' => $breakdown['item_wise'],
@@ -602,8 +602,8 @@ class ReportController extends Controller
     private function buildDatePartyWiseRows(Collection $bills, bool $includeExpense): array
     {
         return $bills
-            ->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))
-            ->map(function (Collection $dateBills, string $dateAd) use ($includeExpense): array {
+            ->groupBy(fn ($bill) => (int) $bill->date)
+            ->map(function (Collection $dateBills, int $dateInt) use ($includeExpense): array {
                 $partyRows = $dateBills
                     ->groupBy(fn ($bill) => (string) $bill->party_id)
                     ->map(function (Collection $partyBills, string $partyId) use ($includeExpense): array {
@@ -627,15 +627,15 @@ class ReportController extends Controller
                     ->all();
 
                 return [
-                    'date_ad' => $dateAd,
-                    'date_bs' => DateHelper::adToBs($dateAd),
+                    'date_bs' => DateHelper::fromDateInt($dateInt),
+                    'date_ad' => '',
                     'bill_count' => $dateBills->count(),
                     'party_count' => count($partyRows),
                     'total_amount' => (float) $dateBills->sum(fn ($bill) => (float) $bill->total),
                     'parties' => $partyRows,
                 ];
             })
-            ->sortByDesc('date_ad')
+            ->sortByDesc('date_bs')
             ->values()
             ->all();
     }

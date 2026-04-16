@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\DateHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -60,6 +61,7 @@ class StoreSaleRequest extends FormRequest
 
         return [
             'party_id' => ['required', 'integer', Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
+            'date_bs' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.line_type' => ['required', 'in:item,general'],
             'items.*.item_id' => ['nullable', 'integer', Rule::exists('items', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
@@ -76,6 +78,12 @@ class StoreSaleRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            try {
+                DateHelper::normalizeBsDate((string) $this->input('date_bs'));
+            } catch (\Throwable $exception) {
+                $validator->errors()->add('date_bs', $exception->getMessage());
+            }
+
             foreach ($this->input('items', []) as $index => $item) {
                 if (($item['line_type'] ?? null) === 'item' && ! filled($item['item_id'] ?? null)) {
                     $validator->errors()->add("items.$index.item_id", 'Select an item for item lines.');

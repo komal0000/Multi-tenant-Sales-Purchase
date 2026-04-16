@@ -221,9 +221,10 @@ class PartyQuickEntryTest extends TestCase
         $ledgerResponse
             ->assertOk()
             ->assertSee('Quick Payment')
-            ->assertSee('payments/create', false)
-            ->assertSee('party_id='.$party->id, false)
-            ->assertSee('type=received', false)
+            ->assertSee('quick-payment-modal', false)
+            ->assertSee('quick-payment-form', false)
+            ->assertSee('name="party_id" value="'.$party->id.'"', false)
+            ->assertSee('name="date_bs"', false)
             ->assertSee('Opening Balance');
     }
 

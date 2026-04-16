@@ -68,6 +68,9 @@
 
             <div class="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
                 <div class="grid gap-4 md:grid-cols-12 md:items-end">
+                    <div class="md:col-span-3">
+                        @include('partials.bs-date-selector', ['name' => 'date_bs', 'label' => 'BS Date', 'value' => old('date_bs', $currentBsDate)])
+                    </div>
                     <div class="md:col-span-8">
                         <div class="flex items-center justify-between">
                             <label for="sale-party-select" class="text-sm font-semibold text-gray-700">Party</label>

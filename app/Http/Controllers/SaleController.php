@@ -47,7 +47,7 @@ class SaleController extends Controller
         $todayBs = DateHelper::getCurrentBS();
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -89,14 +89,15 @@ class SaleController extends Controller
                         });
                     });
                 })
-                ->when($fromAd, fn ($query) => $query->whereDate('created_at', '>=', $fromAd))
-                ->when($toAd, fn ($query) => $query->whereDate('created_at', '<=', $toAd))
-                ->latest()
+                ->when($fromBsInt, fn ($query) => $query->where('date', '>=', $fromBsInt))
+                ->when($toBsInt, fn ($query) => $query->where('date', '<=', $toBsInt))
+                ->orderByDesc('date')
+                ->orderByDesc('id')
                 ->paginate(20)
                 ->withQueryString();
 
             $sales->through(function (Sale $sale) {
-                $sale->created_at_bs = DateHelper::adToBs($sale->created_at);
+                $sale->created_at_bs = DateHelper::fromDateInt((int) $sale->date);
                 $sale->received_amount = (float) $sale->payments->where('type', 'received')->sum('amount');
 
                 return $sale;
@@ -143,6 +144,7 @@ class SaleController extends Controller
             'accountsCreateUrl' => route('accounts.create'),
             'itemsCatalog' => Item::query()->orderBy('name')->get(['id', 'name', 'qty', 'rate', 'cost_price']),
             'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,
+            'currentBsDate' => DateHelper::getCurrentBS(),
             'currentBsDateInt' => DateHelper::currentBsInt(),
         ]);
     }
@@ -153,6 +155,7 @@ class SaleController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
+        $validated['date'] = DateHelper::toDateInt($validated['date_bs']);
 
         $itemTotal = collect($validated['items'])->sum(fn (array $item) => (float) ($item['qty'] ?? 1) * (float) $item['rate']);
         $paymentTotal = collect($validated['payments'] ?? [])->sum(fn (array $payment) => (float) $payment['amount']);
@@ -176,13 +179,14 @@ class SaleController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $sale->load(['party', 'items.item', 'items.expenseCategory']);
-        $sale->created_at_bs = DateHelper::adToBs($sale->created_at);
+        $sale->created_at_bs = DateHelper::fromDateInt((int) $sale->date);
         $sale->received_amount = (float) $sale->payments()->where('type', 'received')->sum('amount');
         $sale->remaining_amount = max(0, (float) $sale->total - $sale->received_amount);
 
         $linkedPayments = $sale->payments()
             ->with('account')
-            ->latest()
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 

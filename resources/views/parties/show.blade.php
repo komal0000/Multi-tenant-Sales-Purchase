@@ -47,6 +47,9 @@
                             <option value="cr" @selected(old('opening_balance_side', $party->opening_balance_side ?? 'dr') === 'cr')>Payable</option>
                         </select>
                     </div>
+                    <div class="sm:col-span-2">
+                        @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => old('opening_balance_date_bs', \App\Helpers\DateHelper::fromDateInt((int) ($party->opening_balance_date ?? \App\Helpers\DateHelper::currentBsInt())))])
+                    </div>
                 </div>
                 <button type="submit" class="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Update Opening Balance</button>
             </form>
@@ -56,4 +59,3 @@
         </div>
     </div>
 @endsection
-

@@ -82,6 +82,10 @@ class PartyController extends Controller
 
         $validated['opening_balance'] = (float) ($validated['opening_balance'] ?? 0);
         $validated['opening_balance_side'] = $validated['opening_balance_side'] ?? 'dr';
+        $validated['opening_balance_date'] = filled($validated['opening_balance_date_bs'] ?? null)
+            ? DateHelper::toDateInt((string) $validated['opening_balance_date_bs'])
+            : DateHelper::currentBsInt();
+        unset($validated['opening_balance_date_bs']);
 
         $party = Party::query()->create($validated);
         $this->ledger->syncPartyOpeningBalance($party);
@@ -98,6 +102,7 @@ class PartyController extends Controller
                     'address' => $party->address,
                     'opening_balance' => (float) ($party->opening_balance ?? 0),
                     'opening_balance_side' => $party->opening_balance_side,
+                    'opening_balance_date' => (int) ($party->opening_balance_date ?? DateHelper::currentBsInt()),
                 ],
             ], 201);
         }
@@ -130,7 +135,7 @@ class PartyController extends Controller
         ]);
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -141,14 +146,14 @@ class PartyController extends Controller
         $query = Ledger::query()->where('party_id', $party->id);
 
         $openingBalance = ((clone $query)
-            ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '<', $fromAd))
+            ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
             ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
             ->value('balance') ?? 0);
 
         $ledgerRows = (clone $query)
-            ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '>=', $fromAd))
-            ->when($toAd, fn ($builder) => $builder->whereDate('created_at', '<=', $toAd))
-            ->orderBy('created_at')
+            ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))
+            ->when($toBsInt, fn ($builder) => $builder->where('date', '<=', $toBsInt))
+            ->orderBy('date')
             ->orderBy('id')
             ->get();
 
@@ -184,6 +189,9 @@ class PartyController extends Controller
         $party->update([
             'opening_balance' => (float) $validated['opening_balance'],
             'opening_balance_side' => $validated['opening_balance_side'],
+            'opening_balance_date' => filled($validated['opening_balance_date_bs'] ?? null)
+                ? DateHelper::toDateInt((string) $validated['opening_balance_date_bs'])
+                : (int) ($party->opening_balance_date ?? DateHelper::currentBsInt()),
         ]);
         $this->ledger->syncPartyOpeningBalance($party);
 

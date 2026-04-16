@@ -48,7 +48,7 @@ class PurchaseController extends Controller
         $todayBs = DateHelper::getCurrentBS();
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -90,14 +90,15 @@ class PurchaseController extends Controller
                         });
                     });
                 })
-                ->when($fromAd, fn ($query) => $query->whereDate('created_at', '>=', $fromAd))
-                ->when($toAd, fn ($query) => $query->whereDate('created_at', '<=', $toAd))
-                ->latest()
+                ->when($fromBsInt, fn ($query) => $query->where('date', '>=', $fromBsInt))
+                ->when($toBsInt, fn ($query) => $query->where('date', '<=', $toBsInt))
+                ->orderByDesc('date')
+                ->orderByDesc('id')
                 ->paginate(20)
                 ->withQueryString();
 
             $purchases->through(function (Purchase $purchase) {
-                $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at);
+                $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date);
                 $purchase->paid_amount = (float) $purchase->payments->where('type', 'given')->sum('amount');
 
                 return $purchase;
@@ -145,6 +146,7 @@ class PurchaseController extends Controller
             'itemsCatalog' => Item::query()->orderBy('name')->get(['id', 'name', 'qty', 'rate', 'cost_price']),
             'expenseCategories' => ExpenseCategory::query()->orderBy('name')->get(['id', 'name', 'parent_id']),
             'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,
+            'currentBsDate' => DateHelper::getCurrentBS(),
             'currentBsDateInt' => DateHelper::currentBsInt(),
         ]);
     }
@@ -155,6 +157,7 @@ class PurchaseController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
+        $validated['date'] = DateHelper::toDateInt($validated['date_bs']);
 
         $itemTotal = collect($validated['items'])->sum(fn (array $item) => (float) ($item['qty'] ?? 1) * (float) $item['rate']);
         $paymentTotal = collect($validated['payments'] ?? [])->sum(fn (array $payment) => (float) $payment['amount']);
@@ -178,13 +181,14 @@ class PurchaseController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $purchase->load(['party', 'items.item', 'items.expenseCategory']);
-        $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at);
+        $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date);
         $purchase->paid_amount = (float) $purchase->payments()->where('type', 'given')->sum('amount');
         $purchase->remaining_amount = max(0, (float) $purchase->total - $purchase->paid_amount);
 
         $linkedPayments = $purchase->payments()
             ->with('account')
-            ->latest()
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\DateHelper;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,12 +24,18 @@ class Ledger extends Model
         return [
             'dr_amount' => 'decimal:2',
             'cr_amount' => 'decimal:2',
+            'date' => 'integer',
         ];
     }
 
     protected static function booted(): void
     {
         static::creating(function (Ledger $ledger): void {
+            if (! filled($ledger->date)) {
+                $sourceDate = $ledger->created_at ?? now();
+                $ledger->date = DateHelper::adToBsInt($sourceDate);
+            }
+
             $hasParty = filled($ledger->party_id);
             $hasAccount = filled($ledger->account_id);
             $hasDr = (float) $ledger->dr_amount > 0;

@@ -33,6 +33,9 @@
                     <input id="quick_party_opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                 </div>
                 <div>
+                    @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => \App\Helpers\DateHelper::getCurrentBS()])
+                </div>
+                <div>
                     <label for="quick_party_opening_balance_side" class="block text-sm font-medium text-gray-700">Balance Type</label>
                     <select id="quick_party_opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                         <option value="dr" selected>Receivable</option>
@@ -73,6 +76,7 @@
         const defaultState = {
             opening_balance: '0',
             opening_balance_side: 'dr',
+            opening_balance_date_bs: @json(\App\Helpers\DateHelper::getCurrentBS()),
         };
 
         function setModalOpen(isOpen) {
@@ -128,6 +132,7 @@
             form.reset();
             const openingInput = form.querySelector('[name="opening_balance"]');
             const sideSelect = form.querySelector('[name="opening_balance_side"]');
+            const dateInput = form.querySelector('[name="opening_balance_date_bs"]');
 
             if (openingInput) {
                 openingInput.value = defaultState.opening_balance;
@@ -135,6 +140,10 @@
 
             if (sideSelect) {
                 sideSelect.value = defaultState.opening_balance_side;
+            }
+
+            if (dateInput) {
+                dateInput.value = defaultState.opening_balance_date_bs;
             }
 
             phoneInput.value = '';

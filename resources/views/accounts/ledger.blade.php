@@ -61,7 +61,7 @@
                             @forelse ($ledgerRows as $row)
                                 @php $running += ((float) $row->dr_amount - (float) $row->cr_amount); @endphp
                                 <tr class="border-t border-gray-100">
-                                    <td class="px-4 py-3 text-gray-500">{{ $row->created_at->format('d M Y') }}</td>
+                                    <td class="px-4 py-3 text-gray-500">{{ \App\Helpers\DateHelper::fromDateInt((int) $row->date) }}</td>
                                     <td class="px-4 py-3 capitalize">{{ $row->type }}</td>
                                     <td class="px-4 py-3 text-xs text-gray-500">{{ $row->reference_text ?? ($row->ref_table . ' / ' . $row->ref_id) }}</td>
                                     <td class="px-4 py-3 text-right text-blue-600">{{ $row->dr_amount > 0 ? number_format($row->dr_amount, 2) : '—' }}</td>
@@ -86,7 +86,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-gray-900 capitalize">{{ $row->type }}</p>
-                                <p class="text-xs text-gray-500">{{ $row->created_at->format('d M Y') }}</p>
+                                <p class="text-xs text-gray-500">{{ \App\Helpers\DateHelper::fromDateInt((int) $row->date) }}</p>
                             </div>
                             <p class="text-xs text-gray-500">{{ $row->reference_text ?? ($row->ref_table . ' / ' . $row->ref_id) }}</p>
                         </div>
@@ -112,5 +112,4 @@
         </div>
     </div>
 @endsection
-
 

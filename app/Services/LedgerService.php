@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Item;
 use App\Models\Ledger;
@@ -20,6 +21,7 @@ class LedgerService
     {
         if (Schema::hasTable('sales') && Schema::hasTable('purchases') && Schema::hasTable('ledger') && Schema::hasTable('parties') && Schema::hasColumn('ledger', 'tenant_id')) {
             $this->ensureBillStatusColumns();
+            $this->ensureBusinessDateColumns();
             $this->ensureLedgerSupportsOpeningBalance();
             $this->backfillPartyOpeningBalanceLedgerRows();
         }
@@ -50,6 +52,7 @@ class LedgerService
             'type' => 'sale',
             'ref_id' => $sale->id,
             'ref_table' => 'sales',
+            'date' => (int) $sale->date,
         ]);
     }
 
@@ -65,6 +68,7 @@ class LedgerService
             'type' => 'sale',
             'ref_id' => $sale->id,
             'ref_table' => 'sales',
+            'date' => (int) $sale->date,
         ]);
     }
 
@@ -80,6 +84,7 @@ class LedgerService
             'type' => 'purchase',
             'ref_id' => $purchase->id,
             'ref_table' => 'purchases',
+            'date' => (int) $purchase->date,
         ]);
     }
 
@@ -95,6 +100,7 @@ class LedgerService
             'type' => 'purchase',
             'ref_id' => $purchase->id,
             'ref_table' => 'purchases',
+            'date' => (int) $purchase->date,
         ]);
     }
 
@@ -112,6 +118,7 @@ class LedgerService
             'type' => 'payment',
             'ref_id' => $payment->id,
             'ref_table' => 'payments',
+            'date' => (int) $payment->date,
         ]);
 
         Ledger::query()->create([
@@ -122,6 +129,7 @@ class LedgerService
             'type' => 'payment',
             'ref_id' => $payment->id,
             'ref_table' => 'payments',
+            'date' => (int) $payment->date,
         ]);
     }
 
@@ -139,6 +147,7 @@ class LedgerService
             'type' => 'payment',
             'ref_id' => $payment->id,
             'ref_table' => 'payments',
+            'date' => (int) $payment->date,
         ]);
 
         Ledger::query()->create([
@@ -149,6 +158,7 @@ class LedgerService
             'type' => 'payment',
             'ref_id' => $payment->id,
             'ref_table' => 'payments',
+            'date' => (int) $payment->date,
         ]);
     }
 
@@ -223,7 +233,7 @@ class LedgerService
             'type' => 'opening_balance',
             'ref_id' => $party->id,
             'ref_table' => 'parties',
-            'created_at' => $party->created_at,
+            'date' => (int) ($party->opening_balance_date ?? DateHelper::currentBsInt()),
         ]);
     }
 
@@ -372,6 +382,64 @@ class LedgerService
         DB::table('purchases')->whereNull('status')->update(['status' => Purchase::STATUS_ACTIVE]);
     }
 
+    private function ensureBusinessDateColumns(): void
+    {
+        if (! Schema::hasColumn('sales', 'date')) {
+            Schema::table('sales', function (Blueprint $table) {
+                $table->unsignedInteger('date')->nullable()->after('status');
+            });
+        }
+
+        if (! Schema::hasColumn('purchases', 'date')) {
+            Schema::table('purchases', function (Blueprint $table) {
+                $table->unsignedInteger('date')->nullable()->after('status');
+            });
+        }
+
+        if (! Schema::hasColumn('payments', 'date')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->unsignedInteger('date')->nullable()->after('notes');
+            });
+        }
+
+        if (! Schema::hasColumn('ledger', 'date')) {
+            Schema::table('ledger', function (Blueprint $table) {
+                $table->unsignedInteger('date')->nullable()->after('ref_table');
+            });
+        }
+
+        if (! Schema::hasColumn('parties', 'opening_balance_date')) {
+            Schema::table('parties', function (Blueprint $table) {
+                $table->unsignedInteger('opening_balance_date')->nullable()->after('opening_balance_side');
+            });
+        }
+
+        $this->backfillRuntimeBusinessDate('sales', 'date');
+        $this->backfillRuntimeBusinessDate('purchases', 'date');
+        $this->backfillRuntimeBusinessDate('payments', 'date');
+        $this->backfillRuntimeBusinessDate('ledger', 'date');
+
+        DB::table('parties')
+            ->whereNull('opening_balance_date')
+            ->orderBy('id')
+            ->chunk(200, function (Collection $rows): void {
+                foreach ($rows as $row) {
+                    $openingDate = DB::table('ledger')
+                        ->where('type', 'opening_balance')
+                        ->where('ref_table', 'parties')
+                        ->where('ref_id', $row->id)
+                        ->where('party_id', $row->id)
+                        ->value('date');
+
+                    DB::table('parties')
+                        ->where('id', $row->id)
+                        ->update([
+                            'opening_balance_date' => $openingDate ? (int) $openingDate : DateHelper::adToBsInt($row->created_at ?? now()),
+                        ]);
+                }
+            });
+    }
+
     private function ensureLedgerSupportsOpeningBalance(): void
     {
         if ($this->ledgerSupportsOpeningBalance()) {
@@ -389,6 +457,7 @@ class LedgerService
             $table->enum('type', ['sale', 'purchase', 'payment', 'opening_balance']);
             $table->unsignedBigInteger('ref_id');
             $table->string('ref_table');
+            $table->unsignedInteger('date')->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->unsignedBigInteger('tenant_id')->nullable();
         });
@@ -406,6 +475,7 @@ class LedgerService
                         'type' => $row->type,
                         'ref_id' => $row->ref_id,
                         'ref_table' => $row->ref_table,
+                        'date' => $row->date ?? DateHelper::adToBsInt($row->created_at ?? now()),
                         'created_at' => $row->created_at,
                         'tenant_id' => $row->tenant_id,
                     ])->all()
@@ -417,12 +487,32 @@ class LedgerService
 
         Schema::table('ledger', function (Blueprint $table) {
             $table->index('tenant_id');
+            $table->index(['tenant_id', 'date'], 'ledger_tenant_date_idx');
             $table->index(['tenant_id', 'created_at'], 'ledger_tenant_created_idx');
+            $table->index(['tenant_id', 'type', 'date'], 'ledger_tenant_type_date_idx');
             $table->index(['tenant_id', 'type', 'created_at'], 'ledger_tenant_type_created_idx');
+            $table->index(['tenant_id', 'party_id', 'date'], 'ledger_tenant_party_date_idx');
             $table->index(['tenant_id', 'party_id', 'created_at'], 'ledger_tenant_party_created_idx');
+            $table->index(['tenant_id', 'account_id', 'date'], 'ledger_tenant_account_date_idx');
             $table->index(['tenant_id', 'account_id', 'created_at'], 'ledger_tenant_account_created_idx');
             $table->index(['tenant_id', 'ref_table', 'ref_id'], 'ledger_tenant_ref_idx');
         });
+    }
+
+    private function backfillRuntimeBusinessDate(string $table, string $column): void
+    {
+        DB::table($table)
+            ->whereNull($column)
+            ->orderBy('id')
+            ->chunk(200, function (Collection $rows) use ($table, $column): void {
+                foreach ($rows as $row) {
+                    DB::table($table)
+                        ->where('id', $row->id)
+                        ->update([
+                            $column => DateHelper::adToBsInt($row->created_at ?? now()),
+                        ]);
+                }
+            });
     }
 
     private function ledgerSupportsOpeningBalance(): bool
@@ -465,7 +555,7 @@ class LedgerService
     private function backfillPartyOpeningBalanceLedgerRows(): void
     {
         DB::table('parties')
-            ->select(['id', 'tenant_id', 'opening_balance', 'opening_balance_side', 'created_at'])
+            ->select(['id', 'tenant_id', 'opening_balance', 'opening_balance_side', 'created_at', 'opening_balance_date'])
             ->where('opening_balance', '>', 0)
             ->orderBy('id')
             ->chunk(200, function (Collection $parties): void {
@@ -494,6 +584,9 @@ class LedgerService
                             'type' => 'opening_balance',
                             'ref_id' => $party->id,
                             'ref_table' => 'parties',
+                            'date' => $party->opening_balance_date
+                                ? (int) $party->opening_balance_date
+                                : DateHelper::adToBsInt($party->created_at ?? now()),
                             'created_at' => $party->created_at ?? now(),
                         ];
                     })

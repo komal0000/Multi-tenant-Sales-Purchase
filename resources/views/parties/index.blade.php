@@ -87,6 +87,14 @@
                                         <option value="dr" selected>Receivable</option>
                                         <option value="cr">Payable</option>
                                     </select>
+                                    <input
+                                        id="party-inline-opening-balance-date-bs"
+                                        type="text"
+                                        value="{{ \App\Helpers\DateHelper::getCurrentBS() }}"
+                                        placeholder="YYYY-MM-DD"
+                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                        autocomplete="off"
+                                    >
                                 </div>
                             </td>
                             <td class="px-5 py-3">
@@ -177,6 +185,7 @@
             const addressInput = document.getElementById('party-inline-address');
             const openingBalanceInput = document.getElementById('party-inline-opening-balance');
             const openingBalanceSideSelect = document.getElementById('party-inline-opening-balance-side');
+            const openingBalanceDateInput = document.getElementById('party-inline-opening-balance-date-bs');
             const saveButton = document.getElementById('party-inline-save');
             const errorRow = document.getElementById('party-inline-error-row');
             const errorList = document.getElementById('party-inline-errors');
@@ -255,6 +264,7 @@
                 addressInput.disabled = saving;
                 openingBalanceInput.disabled = saving;
                 openingBalanceSideSelect.disabled = saving;
+                openingBalanceDateInput.disabled = saving;
                 saveButton.textContent = saving ? 'Saving...' : 'Save';
             }
 
@@ -264,6 +274,7 @@
                 addressInput.value = '';
                 openingBalanceInput.value = '0';
                 openingBalanceSideSelect.value = 'dr';
+                openingBalanceDateInput.value = @json(\App\Helpers\DateHelper::getCurrentBS());
             }
 
             function buildPartyRow(party) {
@@ -337,6 +348,7 @@
                 const address = addressInput.value.trim();
                 const openingBalance = Number(openingBalanceInput.value || 0);
                 const openingBalanceSide = openingBalanceSideSelect.value === 'cr' ? 'cr' : 'dr';
+                const openingBalanceDateBs = openingBalanceDateInput.value.trim();
 
                 if (!name) {
                     renderErrors({ name: ['Name is required.'] });
@@ -364,6 +376,7 @@
 
                 formData.append('opening_balance', String(openingBalance));
                 formData.append('opening_balance_side', openingBalanceSide);
+                formData.append('opening_balance_date_bs', openingBalanceDateBs);
 
                 setSavingState(true);
                 shouldFocusNameAfterSave = false;

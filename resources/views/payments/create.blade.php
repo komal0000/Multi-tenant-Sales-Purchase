@@ -13,6 +13,9 @@
                 @endunless
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
+                        @include('partials.bs-date-selector', ['name' => 'date_bs', 'label' => 'BS Date', 'value' => $selectedDateBs])
+                    </div>
+                    <div>
                         <div class="flex items-center justify-between">
                             <label for="payment-party-select" class="block text-sm font-medium text-gray-700">Party</label>
                             <button type="button" data-open-quick-party-entry data-party-select-id="payment-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>

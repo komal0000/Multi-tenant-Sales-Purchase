@@ -50,9 +50,9 @@ class DashboardController extends Controller
             'totalReceivable' => (float) $partyBalances->filter(fn ($balance) => $balance > 0)->sum(),
             'totalPayable' => abs((float) $partyBalances->filter(fn ($balance) => $balance < 0)->sum()),
             'accounts' => $accounts,
-            'recentSales' => Sale::query()->with('party')->where('status', Sale::STATUS_ACTIVE)->latest()->limit(5)->get(),
-            'recentPurchases' => Purchase::query()->with('party')->where('status', Purchase::STATUS_ACTIVE)->latest()->limit(5)->get(),
-            'recentPayments' => Payment::query()->with(['party', 'account'])->latest()->limit(5)->get(),
+            'recentSales' => Sale::query()->with('party')->where('status', Sale::STATUS_ACTIVE)->orderByDesc('date')->orderByDesc('id')->limit(5)->get(),
+            'recentPurchases' => Purchase::query()->with('party')->where('status', Purchase::STATUS_ACTIVE)->orderByDesc('date')->orderByDesc('id')->limit(5)->get(),
+            'recentPayments' => Payment::query()->with(['party', 'account'])->orderByDesc('date')->orderByDesc('id')->limit(5)->get(),
         ]);
     }
 }

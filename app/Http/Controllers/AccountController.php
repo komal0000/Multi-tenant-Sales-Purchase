@@ -30,7 +30,7 @@ class AccountController extends Controller
 
         $accounts = Account::query()
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
-                $term = '%' . trim((string) $keyword) . '%';
+                $term = '%'.trim((string) $keyword).'%';
 
                 $query->where(function ($subQuery) use ($term) {
                     $subQuery
@@ -118,7 +118,7 @@ class AccountController extends Controller
         ]);
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -131,14 +131,14 @@ class AccountController extends Controller
         $openingBase = $this->openingSigned((float) ($account->opening_balance ?? 0), $account->opening_balance_side ?? 'dr');
 
         $openingBalance = $openingBase + ((clone $query)
-            ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '<', $fromAd))
+            ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
             ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
             ->value('balance') ?? 0);
 
         $ledgerRows = (clone $query)
-            ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '>=', $fromAd))
-            ->when($toAd, fn ($builder) => $builder->whereDate('created_at', '<=', $toAd))
-            ->orderBy('created_at')
+            ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))
+            ->when($toBsInt, fn ($builder) => $builder->where('date', '<=', $toBsInt))
+            ->orderBy('date')
             ->orderBy('id')
             ->get();
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Item;
 use App\Models\ItemLedger;
@@ -25,6 +26,7 @@ class SaleService
             $sale = Sale::query()->create([
                 'party_id' => $data['party_id'],
                 'total' => 0,
+                'date' => (int) ($data['date'] ?? DateHelper::currentBsInt()),
             ]);
 
             foreach ($data['items'] as $item) {
@@ -83,6 +85,7 @@ class SaleService
                     'account_id' => $paymentData['account_id'],
                     'cheque_number' => $paymentData['cheque_number'] ?? null,
                     'purchase_id' => null,
+                    'date' => (int) $sale->date,
                 ]);
 
                 $this->ledger->recordPayment($payment);

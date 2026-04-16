@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\DateHelper;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,20 @@ class Purchase extends Model
     {
         return [
             'total' => 'decimal:2',
+            'date' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $purchase): void {
+            if (filled($purchase->date)) {
+                return;
+            }
+
+            $sourceDate = $purchase->created_at ?? now();
+            $purchase->date = DateHelper::adToBsInt($sourceDate);
+        });
     }
 
     public function party(): BelongsTo

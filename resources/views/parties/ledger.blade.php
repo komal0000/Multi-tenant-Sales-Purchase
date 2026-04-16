@@ -62,7 +62,7 @@
                             @forelse ($ledgerRows as $row)
                                 @php $running += ((float) $row->dr_amount - (float) $row->cr_amount); @endphp
                                 <tr class="border-t border-gray-100">
-                                    <td class="px-4 py-3 text-gray-500">{{ $row->created_at->format('d M Y') }}</td>
+                                    <td class="px-4 py-3 text-gray-500">{{ \App\Helpers\DateHelper::fromDateInt((int) $row->date) }}</td>
                                     <td class="px-4 py-3 capitalize">{{ str_replace('_', ' ', $row->type) }}</td>
                                     <td class="px-4 py-3 text-xs text-gray-500">{{ $row->reference_text ?? ($row->ref_table . ' / ' . $row->ref_id) }}</td>
                                     <td class="px-4 py-3 text-right text-blue-600">{{ $row->dr_amount > 0 ? number_format($row->dr_amount, 2) : '—' }}</td>
@@ -87,7 +87,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-gray-900 capitalize">{{ str_replace('_', ' ', $row->type) }}</p>
-                                <p class="text-xs text-gray-500">{{ $row->created_at->format('d M Y') }}</p>
+                                <p class="text-xs text-gray-500">{{ \App\Helpers\DateHelper::fromDateInt((int) $row->date) }}</p>
                             </div>
                             <p class="text-xs text-gray-500">{{ $row->reference_text ?? ($row->ref_table . ' / ' . $row->ref_id) }}</p>
                         </div>
@@ -132,6 +132,9 @@
                     @endunless
 
                     <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            @include('partials.bs-date-selector', ['name' => 'date_bs', 'label' => 'BS Date', 'value' => \App\Helpers\DateHelper::getCurrentBS()])
+                        </div>
                         <div>
                             <label for="quick_payment_type" class="block text-sm font-medium text-gray-700">Direction</label>
                             <select id="quick_payment_type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>

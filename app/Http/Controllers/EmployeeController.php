@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateHelper;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
@@ -72,6 +73,7 @@ class EmployeeController extends Controller
                 'address' => $validated['address'] ?? null,
                 'opening_balance' => 0,
                 'opening_balance_side' => 'dr',
+                'opening_balance_date' => DateHelper::currentBsInt(),
             ]);
 
             return Employee::query()->create([

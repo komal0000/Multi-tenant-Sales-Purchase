@@ -50,7 +50,7 @@ class PaymentController extends Controller
         $todayBs = DateHelper::getCurrentBS();
 
         try {
-            [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
+            [$fromBsInt, $toBsInt] = DateHelper::getBsIntRangeFromFilters($filters['from_date_bs'] ?? null, $filters['to_date_bs'] ?? null);
         } catch (Throwable $exception) {
             throw ValidationException::withMessages([
                 'from_date_bs' => $exception->getMessage(),
@@ -71,8 +71,8 @@ class PaymentController extends Controller
                 ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
                 ->when($filters['account_id'] ?? null, fn ($query, $accountId) => $query->where('account_id', $accountId))
                 ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
-                ->when($fromAd, fn ($query) => $query->whereDate('created_at', '>=', $fromAd))
-                ->when($toAd, fn ($query) => $query->whereDate('created_at', '<=', $toAd))
+                ->when($fromBsInt, fn ($query) => $query->where('date', '>=', $fromBsInt))
+                ->when($toBsInt, fn ($query) => $query->where('date', '<=', $toBsInt))
                 ->when($filters['keyword'] ?? null, function ($query, $keyword) {
                     $term = '%'.trim((string) $keyword).'%';
 
@@ -84,12 +84,13 @@ class PaymentController extends Controller
                             ->orWhereHas('account', fn ($accountQuery) => $accountQuery->where('name', 'like', $term));
                     });
                 })
-                ->latest()
+                ->orderByDesc('date')
+                ->orderByDesc('id')
                 ->paginate(20)
                 ->withQueryString();
 
             $payments->through(function (Payment $payment) {
-                $payment->created_at_bs = DateHelper::adToBs($payment->created_at);
+                $payment->created_at_bs = DateHelper::fromDateInt((int) $payment->date);
 
                 return $payment;
             });
@@ -140,6 +141,7 @@ class PaymentController extends Controller
                 ? 'received'
                 : ($purchase ? 'given' : ($request->string('type')->toString() ?: 'received'))
         );
+        $selectedDateBs = old('date_bs', $request->string('date_bs')->toString() ?: DateHelper::getCurrentBS());
         $accounts = $this->orderedAccounts();
         $defaultCashAccountId = $accounts->firstWhere('type', 'cash')?->id;
 
@@ -163,6 +165,7 @@ class PaymentController extends Controller
             'selectedPartyId' => $selectedPartyId,
             'selectedAccountId' => old('account_id', $defaultCashAccountId),
             'selectedType' => $selectedType,
+            'selectedDateBs' => $selectedDateBs,
             'selectedSaleId' => old('sale_id', $sale?->id),
             'selectedPurchaseId' => old('purchase_id', $purchase?->id),
         ]);
@@ -193,11 +196,10 @@ class PaymentController extends Controller
             'date_bs' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
 
-        $dateAd = DateHelper::bsToAd($validated['date_bs']);
         $payments = Payment::query()
             ->with(['party', 'account', 'sale', 'purchase'])
-            ->whereDate('created_at', $dateAd)
-            ->orderBy('created_at')
+            ->where('date', DateHelper::toDateInt($validated['date_bs']))
+            ->orderBy('date')
             ->orderBy('id')
             ->get();
 
@@ -214,10 +216,8 @@ class PaymentController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
-        $paymentDateAd = DateHelper::bsToAd($validated['date_bs']);
-        $timestamp = $this->service->timestampForBsDate($paymentDateAd);
-
         $payment = $this->service->create([
+            'date' => DateHelper::toDateInt($validated['date_bs']),
             'party_id' => $validated['party_id'],
             'amount' => $validated['amount'],
             'type' => $validated['type'],
@@ -226,8 +226,6 @@ class PaymentController extends Controller
             'sale_id' => null,
             'purchase_id' => null,
             'notes' => $validated['notes'] ?? null,
-            'created_at' => $timestamp,
-            'updated_at' => $timestamp,
         ]);
 
         return response()->json([
@@ -243,21 +241,14 @@ class PaymentController extends Controller
         $this->ensureStandaloneMassPayment($payment);
 
         $validated = $request->validated();
-        $paymentDateAd = DateHelper::bsToAd($validated['date_bs']);
-        $timestamp = $this->service->timestampForBsDate(
-            $paymentDateAd,
-            optional($payment->created_at)->format('H:i:s')
-        );
-
         $payment = $this->service->updateStandalone($payment, [
+            'date' => DateHelper::toDateInt($validated['date_bs']),
             'party_id' => $validated['party_id'],
             'amount' => $validated['amount'],
             'type' => $validated['type'],
             'account_id' => $validated['account_id'],
             'cheque_number' => null,
             'notes' => $validated['notes'] ?? null,
-            'created_at' => $timestamp,
-            'updated_at' => now(),
         ]);
 
         return response()->json([
@@ -289,6 +280,9 @@ class PaymentController extends Controller
         $validated['type'] = ! empty($validated['sale_id'])
             ? 'received'
             : (! empty($validated['purchase_id']) ? 'given' : ($validated['type'] ?? 'received'));
+        $validated['date'] = filled($validated['date_bs'] ?? null)
+            ? DateHelper::toDateInt((string) $validated['date_bs'])
+            : DateHelper::currentBsInt();
 
         $payment = $this->service->create($validated);
 
@@ -303,6 +297,7 @@ class PaymentController extends Controller
                     'account_id' => $payment->account_id,
                     'cheque_number' => $payment->cheque_number,
                     'notes' => $payment->notes,
+                    'date_bs' => DateHelper::fromDateInt((int) $payment->date),
                 ],
             ], 201);
         }
@@ -318,7 +313,7 @@ class PaymentController extends Controller
         $this->ledger->ensureCompatibilitySchema();
 
         $payment->load(['party', 'account', 'sale', 'purchase']);
-        $payment->created_at_bs = DateHelper::adToBs($payment->created_at);
+        $payment->created_at_bs = DateHelper::fromDateInt((int) $payment->date);
 
         return view('payments.show', [
             'payment' => $payment,
@@ -377,7 +372,8 @@ class PaymentController extends Controller
                     $subQuery->where('total', 'like', '%'.$term.'%');
                 });
             })
-            ->latest()
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate(20, ['id', 'party_id', 'total'], 'page', $filters['page'] ?? 1);
 
         return response()->json([
@@ -431,7 +427,8 @@ class PaymentController extends Controller
                     $subQuery->where('total', 'like', '%'.$term.'%');
                 });
             })
-            ->latest()
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate(20, ['id', 'party_id', 'total'], 'page', $filters['page'] ?? 1);
 
         return response()->json([
@@ -472,8 +469,8 @@ class PaymentController extends Controller
         $sidebarLimit = $this->paymentSidebarLimit();
         $recentEntries = Ledger::query()
             ->where('party_id', $validated['party_id'])
-            ->latest('created_at')
-            ->latest('id')
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->limit($sidebarLimit)
             ->get();
 
@@ -487,7 +484,7 @@ class PaymentController extends Controller
             'tone' => $balance > 0 ? 'positive' : ($balance < 0 ? 'negative' : 'neutral'),
             'sidebar_limit' => $sidebarLimit,
             'recent_entries' => $recentEntries->map(fn (Ledger $entry) => [
-                'date' => $entry->created_at->format('d M Y'),
+                'date' => DateHelper::fromDateInt((int) $entry->date),
                 'type' => str_replace('_', ' ', $entry->type),
                 'reference' => $entry->reference_text ?? ($entry->ref_table.' / '.$entry->ref_id),
                 'receivable' => (float) $entry->dr_amount > 0 ? number_format((float) $entry->dr_amount, 2) : null,
@@ -551,7 +548,7 @@ class PaymentController extends Controller
                 : 'Unknown Account',
             'amount' => number_format((float) $payment->amount, 2, '.', ''),
             'notes' => (string) ($payment->notes ?? ''),
-            'date_bs' => DateHelper::adToBs($payment->created_at),
+            'date_bs' => DateHelper::fromDateInt((int) $payment->date),
             'is_linked' => $isLinked,
             'linked_label' => $linkedLabel,
             'can_edit' => ! $isLinked && (bool) ($request->user()?->can('update', $payment)),

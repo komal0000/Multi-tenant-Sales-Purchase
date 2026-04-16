@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\DateHelper;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Services\LedgerService;
@@ -23,6 +24,7 @@ class StorePaymentRequest extends FormRequest
         $cheque = $this->input('cheque_number');
 
         $this->merge([
+            'date_bs' => $this->filled('date_bs') ? trim((string) $this->input('date_bs')) : null,
             'cheque_number' => filled($cheque) ? trim((string) $cheque) : null,
             'notes' => $this->filled('notes') ? trim((string) $this->input('notes')) : null,
             'type' => $this->filled('type') ? $this->input('type') : null,
@@ -36,6 +38,7 @@ class StorePaymentRequest extends FormRequest
         $tenantId = (int) ($this->user()?->tenant_id ?? 0);
 
         return [
+            'date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'party_id' => ['required', 'integer', Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'type' => ['nullable', 'in:received,given'],
@@ -50,6 +53,14 @@ class StorePaymentRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            if (filled($this->input('date_bs'))) {
+                try {
+                    DateHelper::normalizeBsDate((string) $this->input('date_bs'));
+                } catch (\Throwable $exception) {
+                    $validator->errors()->add('date_bs', $exception->getMessage());
+                }
+            }
+
             $saleId = $this->input('sale_id');
             $purchaseId = $this->input('purchase_id');
             $partyId = (int) $this->input('party_id');

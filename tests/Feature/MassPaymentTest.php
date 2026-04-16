@@ -119,9 +119,10 @@ class MassPaymentTest extends TestCase
             'amount' => 450.50,
             'type' => 'received',
             'notes' => 'First note',
+            'date' => DateHelper::toDateInt($dateBs),
         ]);
         $this->assertSame(2, Ledger::query()->count());
-        $this->assertSame(1, Payment::query()->whereDate('created_at', '2026-04-11')->count());
+        $this->assertSame(1, Payment::query()->where('date', DateHelper::toDateInt($dateBs))->count());
     }
 
     public function test_mass_payment_update_changes_standalone_row_and_keeps_ledgers_in_sync(): void

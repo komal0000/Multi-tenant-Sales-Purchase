@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Party;
 use App\Models\Payment;
@@ -57,6 +58,7 @@ class PaymentService
                 'sale_id' => $data['sale_id'] ?: null,
                 'purchase_id' => $data['purchase_id'] ?: null,
                 'notes' => $data['notes'] ?? null,
+                'date' => (int) ($data['date'] ?? DateHelper::currentBsInt()),
                 'created_at' => $data['created_at'] ?? null,
                 'updated_at' => $data['updated_at'] ?? null,
             ]);
@@ -83,6 +85,7 @@ class PaymentService
                 'account_id' => $data['account_id'],
                 'cheque_number' => $data['cheque_number'] ?? null,
                 'notes' => $data['notes'] ?? null,
+                'date' => (int) ($data['date'] ?? $payment->date),
                 'created_at' => $data['created_at'] ?? $payment->created_at,
                 'updated_at' => $data['updated_at'] ?? now(),
             ])->save();

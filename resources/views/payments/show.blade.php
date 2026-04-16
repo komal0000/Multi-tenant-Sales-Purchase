@@ -6,7 +6,7 @@
             <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <h1 class="text-2xl font-semibold text-gray-900">Payment Detail</h1>
-                    <p class="mt-1 text-sm text-gray-500">{{ $payment->party->name }} • {{ $payment->created_at->format('d M Y, h:i A') }}</p>
+                    <p class="mt-1 text-sm text-gray-500">{{ $payment->party->name }} | BS {{ $payment->created_at_bs }} | Saved {{ $payment->created_at->format('d M Y, h:i A') }}</p>
                 </div>
                 <span class="rounded-full px-3 py-1 text-sm font-medium {{ $payment->type === 'received' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                     {{ ucfirst($payment->type) }}
