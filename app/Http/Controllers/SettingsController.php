@@ -10,17 +10,22 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class SettingsController extends Controller
 {
     public function __construct(private readonly TenantContext $tenantContext) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $payrollSetting = PayrollSetting::query()->firstOrCreate([], [
             'leave_fine_per_day' => 0,
             'overtime_money_per_day' => 0,
+        ]);
+
+        $filters = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
         ]);
 
         $tenantId = $this->tenantContext->requireId();
@@ -28,12 +33,25 @@ class SettingsController extends Controller
         $normalUsers = User::query()
             ->where('tenant_id', $tenantId)
             ->where('role', 1)
+            ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                $term = '%' . trim((string) $keyword) . '%';
+
+                $query->where(function ($subQuery) use ($term) {
+                    $subQuery
+                        ->where('name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
+            })
             ->latest()
             ->get();
 
         return view('settings.index', [
             'payrollSetting' => $payrollSetting,
             'normalUsers' => $normalUsers,
+            'filters' => [
+                'keyword' => $filters['keyword'] ?? null,
+            ],
         ]);
     }
 

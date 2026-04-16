@@ -10,7 +10,7 @@
             <a href="{{ route('purchases.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Purchase</a>
         </div>
 
-        <form method="GET" action="{{ route('purchases.index') }}" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+        <form method="GET" action="{{ route('purchases.index') }}" class="sales-purchase-search-grid rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div>
                 <div class="flex items-center justify-between">
                     <label for="purchases-filter-party-select" class="block text-sm font-medium text-gray-700">Party</label>
@@ -25,6 +25,10 @@
             </div>
             @include('partials.bs-date-selector', ['name' => 'from_date_bs', 'label' => 'From BS Date', 'value' => $filters['from_date_bs'] ?? null])
             @include('partials.bs-date-selector', ['name' => 'to_date_bs', 'label' => 'To BS Date', 'value' => $filters['to_date_bs'] ?? null])
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Keyword</label>
+                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Bill no, amount, party" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+            </div>
             <div class="flex items-center gap-3 md:pb-0.5">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>
                 <a href="{{ route('purchases.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</a>

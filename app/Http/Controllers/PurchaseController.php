@@ -33,6 +33,7 @@ class PurchaseController extends Controller
 
         $filters = $request->validate([
             'party_id' => ['nullable', 'integer', Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
+            'keyword' => ['nullable', 'string', 'max:120'],
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
@@ -49,6 +50,7 @@ class PurchaseController extends Controller
         }
 
         $hasSearched = filled($filters['party_id'] ?? null)
+            || filled($filters['keyword'] ?? null)
             || filled($filters['from_date_bs'] ?? null)
             || filled($filters['to_date_bs'] ?? null);
 
@@ -56,6 +58,27 @@ class PurchaseController extends Controller
             $purchases = Purchase::query()
                 ->with(['party', 'payments'])
                 ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
+                ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                    $term = trim((string) $keyword);
+                    $likeTerm = '%' . $term . '%';
+
+                    $query->where(function ($subQuery) use ($term, $likeTerm) {
+                        if (is_numeric($term)) {
+                            $subQuery
+                                ->whereKey((int) $term)
+                                ->orWhere('total', (float) $term)
+                                ->orWhere('total', 'like', $likeTerm);
+                        } else {
+                            $subQuery->where('total', 'like', $likeTerm);
+                        }
+
+                        $subQuery->orWhereHas('party', function ($partyQuery) use ($likeTerm) {
+                            $partyQuery
+                                ->where('name', 'like', $likeTerm)
+                                ->orWhere('phone', 'like', $likeTerm);
+                        });
+                    });
+                })
                 ->when($fromAd, fn ($query) => $query->whereDate('created_at', '>=', $fromAd))
                 ->when($toAd, fn ($query) => $query->whereDate('created_at', '<=', $toAd))
                 ->latest()
@@ -83,6 +106,7 @@ class PurchaseController extends Controller
             'parties' => $this->partyCache->all(),
             'filters' => [
                 'party_id' => $filters['party_id'] ?? null,
+                'keyword' => $filters['keyword'] ?? null,
                 'from_date_bs' => $filters['from_date_bs'] ?? $todayBs,
                 'to_date_bs' => $filters['to_date_bs'] ?? $todayBs,
             ],

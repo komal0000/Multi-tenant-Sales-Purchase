@@ -27,13 +27,28 @@ class PartyController extends Controller
         private readonly PartyCacheService $partyCache,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Party::class);
 
+        $filters = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $parties = Party::query()
+            ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                $term = '%' . trim((string) $keyword) . '%';
+
+                $query->where(function ($subQuery) use ($term) {
+                    $subQuery
+                        ->where('name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('address', 'like', $term);
+                });
+            })
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $partyIds = $parties->getCollection()->pluck('id')->all();
         $ledgerBalances = empty($partyIds)
@@ -54,7 +69,12 @@ class PartyController extends Controller
             })
         );
 
-        return view('parties.index', compact('parties'));
+        return view('parties.index', [
+            'parties' => $parties,
+            'filters' => [
+                'keyword' => $filters['keyword'] ?? null,
+            ],
+        ]);
     }
 
     public function store(StorePartyRequest $request): RedirectResponse|JsonResponse

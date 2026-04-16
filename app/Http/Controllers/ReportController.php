@@ -6,6 +6,7 @@ use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Ledger;
 use App\Models\Payment;
+use App\Models\Party;
 use App\Models\Purchase;
 use App\Models\Sale;
 use Illuminate\Contracts\View\View;
@@ -186,6 +187,351 @@ class ReportController extends Controller
             'purchaseDetails' => $purchaseDetails,
             'hasSearched' => $hasSearched,
         ]);
+    }
+
+    public function salesReport(Request $request): View
+    {
+        $resolved = $this->resolveReportFilters($request);
+
+        $parties = Party::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
+        $summary = [
+            'total_amount' => 0,
+            'bill_count' => 0,
+            'party_count' => 0,
+            'average_bill' => 0,
+            'generalized' => [],
+            'item_wise' => [],
+            'expense_wise' => [],
+        ];
+
+        $dateWiseRows = [];
+        $partyWiseRows = [];
+        $datePartyWiseRows = [];
+
+        if ($resolved['hasSearched']) {
+            $sales = Sale::query()
+                ->withTrashed()
+                ->with(['party:id,name,phone', 'items.item:id,name'])
+                ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
+                ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
+                ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get();
+
+            $sales->each(fn (Sale $sale) => $sale->created_at_bs = DateHelper::adToBs($sale->created_at));
+
+            $summary = $this->buildReportSummary($sales, false);
+            $dateWiseRows = $this->buildDateWiseRows($sales, false);
+            $partyWiseRows = $this->buildPartyWiseRows($sales, false);
+            $datePartyWiseRows = $this->buildDatePartyWiseRows($sales, false);
+        }
+
+        return view('reports.sales', [
+            'parties' => $parties,
+            'filters' => [
+                'party_id' => $resolved['party_id'],
+                'from_date_bs' => $resolved['from_bs'],
+                'to_date_bs' => $resolved['to_bs'],
+            ],
+            'hasSearched' => $resolved['hasSearched'],
+            'summary' => $summary,
+            'dateWiseRows' => $dateWiseRows,
+            'partyWiseRows' => $partyWiseRows,
+            'datePartyWiseRows' => $datePartyWiseRows,
+        ]);
+    }
+
+    public function purchaseReport(Request $request): View
+    {
+        $resolved = $this->resolveReportFilters($request);
+
+        $parties = Party::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
+        $summary = [
+            'total_amount' => 0,
+            'bill_count' => 0,
+            'party_count' => 0,
+            'average_bill' => 0,
+            'generalized' => [],
+            'item_wise' => [],
+            'expense_wise' => [],
+        ];
+
+        $dateWiseRows = [];
+        $partyWiseRows = [];
+        $datePartyWiseRows = [];
+
+        if ($resolved['hasSearched']) {
+            $purchases = Purchase::query()
+                ->withTrashed()
+                ->with(['party:id,name,phone', 'items.item:id,name', 'items.expenseCategory:id,name'])
+                ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
+                ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
+                ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get();
+
+            $purchases->each(fn (Purchase $purchase) => $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at));
+
+            $summary = $this->buildReportSummary($purchases, true);
+            $dateWiseRows = $this->buildDateWiseRows($purchases, true);
+            $partyWiseRows = $this->buildPartyWiseRows($purchases, true);
+            $datePartyWiseRows = $this->buildDatePartyWiseRows($purchases, true);
+        }
+
+        return view('reports.purchases', [
+            'parties' => $parties,
+            'filters' => [
+                'party_id' => $resolved['party_id'],
+                'from_date_bs' => $resolved['from_bs'],
+                'to_date_bs' => $resolved['to_bs'],
+            ],
+            'hasSearched' => $resolved['hasSearched'],
+            'summary' => $summary,
+            'dateWiseRows' => $dateWiseRows,
+            'partyWiseRows' => $partyWiseRows,
+            'datePartyWiseRows' => $datePartyWiseRows,
+        ]);
+    }
+
+    /**
+     * @return array{
+     *   party_id: int|null,
+     *   from_bs: string,
+     *   to_bs: string,
+     *   from_ad: string|null,
+     *   to_ad: string|null,
+     *   hasSearched: bool
+     * }
+     */
+    private function resolveReportFilters(Request $request): array
+    {
+        $tenantId = (int) ($request->user()?->tenant_id ?? 0);
+        $todayBs = DateHelper::getCurrentBS();
+        $startBs = substr($todayBs, 0, 8) . '01';
+
+        $filters = $request->validate([
+            'party_id' => ['nullable', 'integer', Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
+            'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+        ]);
+
+        $hasSearched = filled($filters['party_id'] ?? null)
+            || filled($filters['from_date_bs'] ?? null)
+            || filled($filters['to_date_bs'] ?? null);
+
+        $fromBs = $filters['from_date_bs'] ?? $startBs;
+        $toBs = $filters['to_date_bs'] ?? $todayBs;
+
+        $fromAd = null;
+        $toAd = null;
+
+        if ($hasSearched) {
+            try {
+                [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($fromBs, $toBs);
+            } catch (Throwable $exception) {
+                throw ValidationException::withMessages([
+                    'from_date_bs' => $exception->getMessage(),
+                    'to_date_bs' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'party_id' => isset($filters['party_id']) ? (int) $filters['party_id'] : null,
+            'from_bs' => $fromBs,
+            'to_bs' => $toBs,
+            'from_ad' => $fromAd,
+            'to_ad' => $toAd,
+            'hasSearched' => $hasSearched,
+        ];
+    }
+
+    /**
+     * @param Collection<int, Sale|Purchase> $bills
+     * @return array<string, mixed>
+     */
+    private function buildReportSummary(Collection $bills, bool $includeExpense): array
+    {
+        $lineItems = $bills->flatMap(fn ($bill) => $bill->items);
+        $breakdown = $this->buildLineBreakdown($lineItems, $includeExpense);
+        $totalAmount = (float) $bills->sum(fn ($bill) => (float) $bill->total);
+        $billCount = $bills->count();
+
+        return [
+            'total_amount' => $totalAmount,
+            'bill_count' => $billCount,
+            'party_count' => $bills->pluck('party_id')->filter()->unique()->count(),
+            'average_bill' => $billCount > 0 ? $totalAmount / $billCount : 0,
+            'generalized' => $breakdown['generalized'],
+            'item_wise' => $breakdown['item_wise'],
+            'expense_wise' => $breakdown['expense_wise'],
+        ];
+    }
+
+    /**
+     * @param Collection<int, Sale|Purchase> $bills
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildDateWiseRows(Collection $bills, bool $includeExpense): array
+    {
+        return $bills
+            ->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))
+            ->map(function (Collection $dateBills, string $dateAd) use ($includeExpense): array {
+                $lineItems = $dateBills->flatMap(fn ($bill) => $bill->items);
+                $breakdown = $this->buildLineBreakdown($lineItems, $includeExpense);
+
+                return [
+                    'date_ad' => $dateAd,
+                    'date_bs' => DateHelper::adToBs($dateAd),
+                    'bill_count' => $dateBills->count(),
+                    'party_count' => $dateBills->pluck('party_id')->filter()->unique()->count(),
+                    'total_amount' => (float) $dateBills->sum(fn ($bill) => (float) $bill->total),
+                    'generalized' => $breakdown['generalized'],
+                    'item_wise' => $breakdown['item_wise'],
+                    'expense_wise' => $breakdown['expense_wise'],
+                ];
+            })
+            ->sortByDesc('date_ad')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param Collection<int, Sale|Purchase> $bills
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildPartyWiseRows(Collection $bills, bool $includeExpense): array
+    {
+        return $bills
+            ->groupBy(fn ($bill) => (string) $bill->party_id)
+            ->map(function (Collection $partyBills, string $partyId) use ($includeExpense): array {
+                $lineItems = $partyBills->flatMap(fn ($bill) => $bill->items);
+                $breakdown = $this->buildLineBreakdown($lineItems, $includeExpense);
+                $party = $partyBills->first()?->party;
+
+                return [
+                    'party_id' => (int) $partyId,
+                    'party_name' => $party?->name ?? 'Unknown Party',
+                    'party_phone' => $party?->phone,
+                    'bill_count' => $partyBills->count(),
+                    'date_count' => $partyBills->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))->count(),
+                    'total_amount' => (float) $partyBills->sum(fn ($bill) => (float) $bill->total),
+                    'generalized' => $breakdown['generalized'],
+                    'item_wise' => $breakdown['item_wise'],
+                    'expense_wise' => $breakdown['expense_wise'],
+                ];
+            })
+            ->sortByDesc('total_amount')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param Collection<int, Sale|Purchase> $bills
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildDatePartyWiseRows(Collection $bills, bool $includeExpense): array
+    {
+        return $bills
+            ->groupBy(fn ($bill) => $bill->created_at->format('Y-m-d'))
+            ->map(function (Collection $dateBills, string $dateAd) use ($includeExpense): array {
+                $partyRows = $dateBills
+                    ->groupBy(fn ($bill) => (string) $bill->party_id)
+                    ->map(function (Collection $partyBills, string $partyId) use ($includeExpense): array {
+                        $lineItems = $partyBills->flatMap(fn ($bill) => $bill->items);
+                        $breakdown = $this->buildLineBreakdown($lineItems, $includeExpense);
+                        $party = $partyBills->first()?->party;
+
+                        return [
+                            'party_id' => (int) $partyId,
+                            'party_name' => $party?->name ?? 'Unknown Party',
+                            'party_phone' => $party?->phone,
+                            'bill_count' => $partyBills->count(),
+                            'total_amount' => (float) $partyBills->sum(fn ($bill) => (float) $bill->total),
+                            'generalized' => $breakdown['generalized'],
+                            'item_wise' => $breakdown['item_wise'],
+                            'expense_wise' => $breakdown['expense_wise'],
+                        ];
+                    })
+                    ->sortByDesc('total_amount')
+                    ->values()
+                    ->all();
+
+                return [
+                    'date_ad' => $dateAd,
+                    'date_bs' => DateHelper::adToBs($dateAd),
+                    'bill_count' => $dateBills->count(),
+                    'party_count' => count($partyRows),
+                    'total_amount' => (float) $dateBills->sum(fn ($bill) => (float) $bill->total),
+                    'parties' => $partyRows,
+                ];
+            })
+            ->sortByDesc('date_ad')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param Collection<int, mixed> $lineItems
+     * @return array{generalized: array<int, array<string, mixed>>, item_wise: array<int, array<string, mixed>>, expense_wise: array<int, array<string, mixed>>}
+     */
+    private function buildLineBreakdown(Collection $lineItems, bool $includeExpense): array
+    {
+        $generalized = $this->groupLineRows(
+            $lineItems->where('line_type', 'general'),
+            fn ($lineItem) => filled($lineItem->description ?? null)
+                ? trim((string) $lineItem->description)
+                : 'General'
+        );
+
+        $itemWise = $this->groupLineRows(
+            $lineItems->where('line_type', 'item'),
+            fn ($lineItem) => $lineItem->item?->name
+                ?? (filled($lineItem->description ?? null) ? trim((string) $lineItem->description) : 'Unknown Item')
+        );
+
+        $expenseWise = $includeExpense
+            ? $this->groupLineRows(
+                $lineItems->where('line_type', 'expense'),
+                fn ($lineItem) => $lineItem->expenseCategory?->name
+                    ?? (filled($lineItem->description ?? null) ? trim((string) $lineItem->description) : 'Uncategorized Expense')
+            )
+            : [];
+
+        return [
+            'generalized' => $generalized,
+            'item_wise' => $itemWise,
+            'expense_wise' => $expenseWise,
+        ];
+    }
+
+    /**
+     * @param Collection<int, mixed> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function groupLineRows(Collection $rows, callable $labelResolver): array
+    {
+        return $rows
+            ->groupBy(fn ($row) => (string) $labelResolver($row))
+            ->map(function (Collection $lineRows, string $label): array {
+                return [
+                    'label' => $label,
+                    'qty' => (float) $lineRows->sum(fn ($lineRow) => (float) ($lineRow->qty ?? 0)),
+                    'amount' => (float) $lineRows->sum(fn ($lineRow) => (float) ($lineRow->total ?? 0)),
+                    'line_count' => $lineRows->count(),
+                ];
+            })
+            ->sortByDesc('amount')
+            ->values()
+            ->all();
     }
 
     private function openingBalanceBase(Collection $cashAccounts, ?int $selectedAccountId): float

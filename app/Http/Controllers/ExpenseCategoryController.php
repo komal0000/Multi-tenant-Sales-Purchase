@@ -9,20 +9,35 @@ use App\Models\ExpenseCategory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class ExpenseCategoryController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', ExpenseCategory::class);
+
+        $filters = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
+        ]);
 
         [$categoryTree, ] = $this->buildCategoryTreePayload();
 
         $categories = ExpenseCategory::query()
             ->with('parent:id,name')
+            ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                $term = '%' . trim((string) $keyword) . '%';
+
+                $query->where(function ($subQuery) use ($term) {
+                    $subQuery
+                        ->where('name', 'like', $term)
+                        ->orWhereHas('parent', fn ($parentQuery) => $parentQuery->where('name', 'like', $term));
+                });
+            })
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $parentOptions = ExpenseCategory::query()
             ->orderBy('name')
@@ -32,6 +47,9 @@ class ExpenseCategoryController extends Controller
             'categories' => $categories,
             'parentOptions' => $parentOptions,
             'categoryTree' => $categoryTree,
+            'filters' => [
+                'keyword' => $filters['keyword'] ?? null,
+            ],
         ]);
     }
 

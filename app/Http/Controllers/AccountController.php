@@ -20,13 +20,27 @@ class AccountController extends Controller
 {
     public function __construct(private readonly LedgerService $ledger) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Account::class);
 
+        $filters = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $accounts = Account::query()
+            ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                $term = '%' . trim((string) $keyword) . '%';
+
+                $query->where(function ($subQuery) use ($term) {
+                    $subQuery
+                        ->where('name', 'like', $term)
+                        ->orWhere('type', 'like', $term);
+                });
+            })
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $accountIds = $accounts->getCollection()->pluck('id')->all();
         $ledgerBalances = empty($accountIds)
@@ -47,7 +61,12 @@ class AccountController extends Controller
             })
         );
 
-        return view('accounts.index', compact('accounts'));
+        return view('accounts.index', [
+            'accounts' => $accounts,
+            'filters' => [
+                'keyword' => $filters['keyword'] ?? null,
+            ],
+        ]);
     }
 
     public function create(): View

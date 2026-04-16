@@ -18,22 +18,24 @@
 <body class="min-h-screen bg-gray-50 text-gray-800" x-data="{ sidebarOpen: false }">
     @php
         $navigationItems = [
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard'],
-            ['label' => 'Parties', 'route' => 'parties.index', 'active' => 'parties.*'],
-            ['label' => 'Accounts', 'route' => 'accounts.index', 'active' => 'accounts.*'],
-            ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*'],
-            ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'active' => 'expense-categories.*'],
-            ['label' => 'Employees', 'route' => 'employees.index', 'active' => 'employees.*'],
-            ['label' => 'Sales', 'route' => 'sales.index', 'active' => 'sales.*'],
-            ['label' => 'Purchases', 'route' => 'purchases.index', 'active' => 'purchases.*'],
-            ['label' => 'Payments', 'route' => 'payments.index', 'active' => 'payments.*'],
-            ['label' => 'Employee Salary', 'route' => 'employee-salaries.index', 'active' => 'employee-salaries.*'],
-            ['label' => 'Cashbook', 'route' => 'reports.cashbook', 'active' => 'reports.cashbook'],
-            ['label' => 'Profit / Loss', 'route' => 'reports.profit-loss', 'active' => 'reports.profit-loss'],
+            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'dashboard', 'section' => 'main'],
+            ['label' => 'Parties', 'route' => 'parties.index', 'active' => 'parties.*', 'icon' => 'parties', 'section' => 'main'],
+            ['label' => 'Accounts', 'route' => 'accounts.index', 'active' => 'accounts.*', 'icon' => 'accounts', 'section' => 'main'],
+            ['label' => 'Employees', 'route' => 'employees.index', 'active' => 'employees.*', 'icon' => 'employees', 'section' => 'main'],
+            ['label' => 'Sales', 'route' => 'sales.index', 'active' => 'sales.*', 'icon' => 'sales', 'section' => 'main'],
+            ['label' => 'Purchases', 'route' => 'purchases.index', 'active' => 'purchases.*', 'icon' => 'purchases', 'section' => 'main'],
+            ['label' => 'Payments', 'route' => 'payments.index', 'active' => 'payments.*', 'icon' => 'payments', 'section' => 'main'],
+            ['label' => 'Employee Salary', 'route' => 'employee-salaries.index', 'active' => 'employee-salaries.*', 'icon' => 'employee-salaries', 'section' => 'main'],
+            ['label' => 'Sales Report', 'route' => 'reports.sales', 'active' => 'reports.sales', 'icon' => 'sales', 'section' => 'reports'],
+            ['label' => 'Purchase Report', 'route' => 'reports.purchases', 'active' => 'reports.purchases', 'icon' => 'purchases', 'section' => 'reports'],
+            ['label' => 'Cashbook', 'route' => 'reports.cashbook', 'active' => 'reports.cashbook', 'icon' => 'cashbook', 'section' => 'reports'],
+            ['label' => 'Profit / Loss', 'route' => 'reports.profit-loss', 'active' => 'reports.profit-loss', 'icon' => 'profit-loss', 'section' => 'reports'],
+            ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*', 'icon' => 'items', 'section' => 'settings'],
+            ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'active' => 'expense-categories.*', 'icon' => 'expense-categories', 'section' => 'settings'],
         ];
 
         if (auth()->check() && auth()->user()->isAdmin()) {
-            $navigationItems[] = ['label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*'];
+            $navigationItems[] = ['label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'icon' => 'settings', 'section' => 'settings'];
         }
 
         $routeName = request()->route()?->getName();

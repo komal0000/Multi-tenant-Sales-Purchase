@@ -9,19 +9,33 @@ use App\Models\Item;
 use App\Models\ItemLedger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class ItemController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Item::class);
 
+        $filters = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $items = Item::query()
+            ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                $term = '%' . trim((string) $keyword) . '%';
+
+                $query->where('name', 'like', $term);
+            })
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('items.index', [
             'items' => $items,
+            'filters' => [
+                'keyword' => $filters['keyword'] ?? null,
+            ],
         ]);
     }
 

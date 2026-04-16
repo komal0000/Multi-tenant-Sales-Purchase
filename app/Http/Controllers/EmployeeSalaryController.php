@@ -33,6 +33,7 @@ class EmployeeSalaryController extends Controller
 
         $filters = $request->validate([
             'employee_id' => ['nullable', 'integer', Rule::exists('employees', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
+            'keyword' => ['nullable', 'string', 'max:120'],
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
@@ -54,6 +55,7 @@ class EmployeeSalaryController extends Controller
         }
 
         $hasSearched = filled($filters['employee_id'] ?? null)
+            || filled($filters['keyword'] ?? null)
             || filled($filters['from_date_bs'] ?? null)
             || filled($filters['to_date_bs'] ?? null);
 
@@ -61,6 +63,21 @@ class EmployeeSalaryController extends Controller
             $rows = EmployeeSalary::query()
                 ->with('party')
                 ->when($filters['employee_id'] ?? null, fn ($query, $employeeId) => $query->where('employee_id', $employeeId))
+                ->when($filters['keyword'] ?? null, function ($query, $keyword) {
+                    $term = '%' . trim((string) $keyword) . '%';
+
+                    $query->where(function ($subQuery) use ($term) {
+                        $subQuery
+                            ->where('employee_name', 'like', $term)
+                            ->orWhere('employee_code', 'like', $term)
+                            ->orWhere('salary_month', 'like', $term)
+                            ->orWhereHas('party', function ($partyQuery) use ($term) {
+                                $partyQuery
+                                    ->where('name', 'like', $term)
+                                    ->orWhere('phone', 'like', $term);
+                            });
+                    });
+                })
                 ->when($fromAd, fn ($query) => $query->whereDate('salary_date', '>=', $fromAd))
                 ->when($toAd, fn ($query) => $query->whereDate('salary_date', '<=', $toAd))
                 ->orderByDesc('salary_date')
@@ -88,6 +105,7 @@ class EmployeeSalaryController extends Controller
             'employees' => $employees,
             'filters' => [
                 'employee_id' => $filters['employee_id'] ?? null,
+                'keyword' => $filters['keyword'] ?? null,
                 'from_date_bs' => $filters['from_date_bs'] ?? null,
                 'to_date_bs' => $filters['to_date_bs'] ?? null,
             ],

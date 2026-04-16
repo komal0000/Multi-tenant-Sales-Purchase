@@ -7,6 +7,33 @@
             <p class="text-sm text-gray-500">Manage payroll rates and normal users.</p>
         </div>
 
+        <section id="master-data" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Master Data</h2>
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Inventory Setup</span>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <a href="{{ route('items.index') }}" class="group flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/40">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition group-hover:bg-indigo-100 group-hover:text-indigo-700">
+                        @include('partials.nav-icon', ['name' => 'items', 'class' => 'h-5 w-5'])
+                    </span>
+                    <span>
+                        <span class="block text-sm font-semibold text-gray-900">Items</span>
+                        <span class="block text-xs text-gray-500">Manage item names, quantity and rates.</span>
+                    </span>
+                </a>
+                <a href="{{ route('expense-categories.index') }}" class="group flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/40">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition group-hover:bg-indigo-100 group-hover:text-indigo-700">
+                        @include('partials.nav-icon', ['name' => 'expense-categories', 'class' => 'h-5 w-5'])
+                    </span>
+                    <span>
+                        <span class="block text-sm font-semibold text-gray-900">Expense Categories</span>
+                        <span class="block text-xs text-gray-500">Manage reusable expense category tree.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
+
         <div class="grid gap-6 xl:grid-cols-2">
             <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="text-lg font-semibold text-gray-900">Payroll Settings</h2>
@@ -63,6 +90,17 @@
                 <h2 class="text-lg font-semibold text-gray-900">Normal Users</h2>
                 <span class="text-sm text-gray-500">Edit or delete normal users</span>
             </div>
+
+            <form method="GET" action="{{ route('settings.index') }}" class="mb-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Search Users</label>
+                    <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Name, phone or email" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                </div>
+                <div class="flex items-center gap-3 md:pb-0.5">
+                    <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>
+                    <a href="{{ route('settings.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</a>
+                </div>
+            </form>
 
             <div class="overflow-x-auto">
                 <table class="min-w-[860px] w-full text-sm">

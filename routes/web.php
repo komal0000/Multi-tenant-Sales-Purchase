@@ -86,6 +86,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::resource('employee-salaries', EmployeeSalaryController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('employee-salaries/{employeeSalary}/print', [EmployeeSalaryController::class, 'print'])->name('employee-salaries.print');
 
+    Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
+    Route::get('reports/purchases', [ReportController::class, 'purchaseReport'])->name('reports.purchases');
     Route::get('reports/cashbook', [ReportController::class, 'cashbook'])->name('reports.cashbook');
     Route::get('reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
 });
