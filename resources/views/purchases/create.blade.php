@@ -44,6 +44,7 @@
                     'expense_category_id' => filled($item['expense_category_id'] ?? null) ? (string) $item['expense_category_id'] : '',
                     'qty' => (float) ($item['qty'] ?? 1),
                     'rate' => (float) ($item['rate'] ?? $item['price'] ?? 0),
+                    'total' => (float) ($item['total'] ?? (($item['qty'] ?? 1) * ($item['rate'] ?? $item['price'] ?? 0))),
                 ];
             })
             ->filter(fn (array $item) => $item['item_id'] !== '' || $item['description'] !== '' || $item['expense_category_id'] !== '' || $item['qty'] > 0 || $item['rate'] > 0)
@@ -142,15 +143,15 @@
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Qty</label>
-                        <input x-model.number="draftItem.qty" x-ref="itemQty" @input="updateDraftItemTotal" @keydown.enter.prevent="focus('itemRate')" enterkeyhint="next" type="number" step="0.0001" min="0.0001" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input x-model.number="draftItem.qty" x-ref="itemQty" @input="onDraftQtyChanged" @keydown.enter.prevent="focus('itemRate')" enterkeyhint="next" type="number" step="0.0001" min="0.0001" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Rate</label>
-                        <input x-model.number="draftItem.rate" x-ref="itemRate" @input="updateDraftItemTotal" @keydown.enter.prevent="commitItem" enterkeyhint="done" type="number" step="0.01" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input x-model.number="draftItem.rate" x-ref="itemRate" @input="updateDraftItemFromRate" @keydown.enter.prevent="focus('itemTotal')" enterkeyhint="next" type="number" step="0.0001" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
-                    <div class="col-span-4 md:col-span-1">
+                    <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Total</label>
-                        <input :value="money(draftItem.total)" type="text" readonly class="mt-1 w-full rounded border border-gray-300 bg-gray-100 px-2 py-2 text-right text-sm font-mono text-gray-700">
+                        <input x-model.number="draftItem.total" x-ref="itemTotal" @input="updateDraftItemFromTotal" @keydown.enter.prevent="commitItem" enterkeyhint="done" type="number" step="0.01" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm font-mono text-gray-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div class="col-span-12 md:col-span-1 md:flex md:items-end">
                         <button type="button" @click="commitItem" class="mt-1 w-full rounded bg-indigo-600 px-2 py-2 text-sm font-semibold text-white hover:bg-indigo-700">ADD</button>
@@ -163,8 +164,8 @@
                             <tr>
                                 <th class="border border-gray-300 px-2 py-1 text-left">Type</th>
                                 <th class="border border-gray-300 px-2 py-1 text-left">Particular</th>
-                                <th class="border border-gray-300 px-2 py-1 text-right">Rate</th>
                                 <th class="border border-gray-300 px-2 py-1 text-right">Qty</th>
+                                <th class="border border-gray-300 px-2 py-1 text-right">Rate</th>
                                 <th class="border border-gray-300 px-2 py-1 text-right">Total</th>
                                 <th class="border border-gray-300 px-2 py-1 text-center">Action</th>
                             </tr>
@@ -179,8 +180,8 @@
                                 <tr>
                                     <td class="border border-gray-300 px-2 py-1" x-text="lineTypeLabel(item.line_type)"></td>
                                     <td class="border border-gray-300 px-2 py-1" x-text="lineLabel(item)"></td>
-                                    <td class="border border-gray-300 px-2 py-1 text-right font-mono" x-text="money(item.rate)"></td>
                                     <td class="border border-gray-300 px-2 py-1 text-right font-mono" x-text="qty(item.qty)"></td>
+                                    <td class="border border-gray-300 px-2 py-1 text-right font-mono" x-text="rate(item.rate)"></td>
                                     <td class="border border-gray-300 px-2 py-1 text-right font-mono" x-text="money(item.total)"></td>
                                     <td class="border border-gray-300 px-2 py-1 text-center">
                                         <button type="button" @click="removeItem(index)" class="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">Remove</button>
@@ -275,7 +276,7 @@
                     <input type="hidden" :name="`items[${index}][description]`" :value="item.description">
                     <input type="hidden" :name="`items[${index}][expense_category_id]`" :value="item.expense_category_id">
                     <input type="hidden" :name="`items[${index}][qty]`" :value="qty(item.qty)">
-                    <input type="hidden" :name="`items[${index}][rate]`" :value="money(item.rate)">
+                    <input type="hidden" :name="`items[${index}][rate]`" :value="rate(item.rate)">
                 </div>
             </template>
 
@@ -309,13 +310,14 @@
                 defaultCashAccountId: String(initialState.defaultCashAccountId || ''),
                 message: '',
                 draftItem: {
-                    line_type: 'item',
+                    line_type: 'general',
                     item_id: '',
                     description: '',
                     expense_category_id: '',
                     qty: 1,
                     rate: 0,
                     total: 0,
+                    last_edited: 'rate',
                 },
                 draftPayment: {
                     account_id: String(initialState.defaultCashAccountId || ''),
@@ -378,15 +380,11 @@
                         cheque_number: String(payment.cheque_number || ''),
                     }));
 
-                    if (!this.draftItem.item_id && this.itemsCatalog.length > 0) {
-                        this.draftItem.item_id = String(this.itemsCatalog[0].id);
-                    }
-
                     if (!this.draftItem.expense_category_id && this.expenseCategories.length > 0) {
                         this.draftItem.expense_category_id = String(this.expenseCategories[0].id);
                     }
 
-                    this.onDraftItemSelected();
+                    this.updateDraftItemFromRate();
 
                     if (window.jQuery && this.$refs.party) {
                         const $party = window.jQuery(this.$refs.party);
@@ -395,6 +393,8 @@
                             this.partyId = String(event.target.value || '');
                         });
                     }
+
+                    this.focus('itemDescription');
                 },
                 toNumber(value) {
                     const number = Number(value);
@@ -407,6 +407,9 @@
                 money(value) {
                     return this.toNumber(value).toFixed(2);
                 },
+                rate(value) {
+                    return this.toNumber(value).toFixed(4);
+                },
                 qty(value) {
                     return this.toNumber(value).toFixed(4);
                 },
@@ -417,8 +420,30 @@
                         }
                     });
                 },
-                updateDraftItemTotal() {
+                updateDraftItemFromRate() {
+                    this.draftItem.last_edited = 'rate';
                     this.draftItem.total = this.roundMoney(this.toNumber(this.draftItem.qty) * this.toNumber(this.draftItem.rate));
+                },
+                updateDraftItemFromTotal() {
+                    this.draftItem.last_edited = 'total';
+                    this.draftItem.total = this.roundMoney(this.toNumber(this.draftItem.total));
+
+                    if (this.toNumber(this.draftItem.qty) <= 0) {
+                        this.draftItem.rate = 0;
+
+                        return;
+                    }
+
+                    this.draftItem.rate = Math.round(this.toNumber(this.draftItem.total) / this.toNumber(this.draftItem.qty) * 10000) / 10000;
+                },
+                onDraftQtyChanged() {
+                    if (this.draftItem.last_edited === 'total') {
+                        this.updateDraftItemFromTotal();
+
+                        return;
+                    }
+
+                    this.updateDraftItemFromRate();
                 },
                 onDraftLineTypeChanged() {
                     if (this.draftItem.line_type === 'item') {
@@ -430,6 +455,7 @@
                         }
 
                         this.onDraftItemSelected();
+                        this.focus('itemSelect');
 
                         return;
                     }
@@ -442,14 +468,16 @@
                             this.draftItem.expense_category_id = String(this.expenseCategories[0].id);
                         }
 
-                        this.updateDraftItemTotal();
+                        this.updateDraftItemFromRate();
+                        this.focus('expenseCategory');
 
                         return;
                     }
 
                     this.draftItem.item_id = '';
                     this.draftItem.expense_category_id = '';
-                    this.updateDraftItemTotal();
+                    this.focus('itemDescription');
+                    this.updateDraftItemFromRate();
                 },
                 onDraftItemSelected() {
                     if (this.draftItem.line_type !== 'item') {
@@ -458,7 +486,7 @@
 
                     const selectedItem = this.itemsLookup[String(this.draftItem.item_id)] || null;
                     if (!selectedItem) {
-                        this.updateDraftItemTotal();
+                        this.updateDraftItemFromRate();
 
                         return;
                     }
@@ -467,7 +495,7 @@
                         this.draftItem.rate = this.toNumber(selectedItem.cost_price || selectedItem.rate);
                     }
 
-                    this.updateDraftItemTotal();
+                    this.updateDraftItemFromRate();
                 },
                 lineTypeLabel(lineType) {
                     if (lineType === 'item') {
@@ -553,37 +581,18 @@
                         total: this.roundMoney(qty * rate),
                     });
 
-                    const nextItemId = lineType === 'item'
-                        ? (itemId || (this.itemsCatalog[0] ? String(this.itemsCatalog[0].id) : ''))
-                        : '';
-                    const nextExpenseCategoryId = lineType === 'expense'
-                        ? (expenseCategoryId || (this.expenseCategories[0] ? String(this.expenseCategories[0].id) : ''))
-                        : '';
-
                     this.draftItem = {
-                        line_type: lineType,
-                        item_id: nextItemId,
+                        line_type: 'general',
+                        item_id: '',
                         description: '',
-                        expense_category_id: nextExpenseCategoryId,
+                        expense_category_id: this.expenseCategories[0] ? String(this.expenseCategories[0].id) : '',
                         qty: 1,
-                        rate: lineType === 'item' ? this.toNumber(this.itemsLookup[nextItemId]?.cost_price || this.itemsLookup[nextItemId]?.rate) : 0,
+                        rate: 0,
                         total: 0,
+                        last_edited: 'rate',
                     };
 
-                    this.updateDraftItemTotal();
-
-                    if (lineType === 'item') {
-                        this.focus('itemSelect');
-
-                        return;
-                    }
-
-                    if (lineType === 'expense') {
-                        this.focus('expenseCategory');
-
-                        return;
-                    }
-
+                    this.updateDraftItemFromRate();
                     this.focus('itemDescription');
                 },
                 removeItem(index) {

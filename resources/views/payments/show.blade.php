@@ -26,13 +26,17 @@
                     <dt class="text-sm text-gray-500">Cheque Number</dt>
                     <dd class="mt-1 text-xl font-semibold text-gray-900">{{ $payment->cheque_number ?: '-' }}</dd>
                 </div>
+                <div class="rounded-lg bg-gray-50 p-4">
+                    <dt class="text-sm text-gray-500">Notes</dt>
+                    <dd class="mt-1 text-xl font-semibold text-gray-900">{{ $payment->notes ?: '-' }}</dd>
+                </div>
                 <div class="rounded-lg bg-gray-50 p-4 sm:col-span-2">
                     <dt class="text-sm text-gray-500">Linked Bill</dt>
                     <dd class="mt-1 text-gray-900">
                         @if ($payment->sale)
-                            Sale / {{ $payment->sale->party->name ?? $payment->party->name }} / {{ number_format($payment->sale->total, 2) }}
+                            Sale #{{ $payment->sale->id }} / {{ $payment->sale->party->name ?? $payment->party->name }} / {{ number_format($payment->sale->total, 2) }}
                         @elseif ($payment->purchase)
-                            Purchase / {{ $payment->purchase->party->name ?? $payment->party->name }} / {{ number_format($payment->purchase->total, 2) }}
+                            Purchase #{{ $payment->purchase->id }} / {{ $payment->purchase->party->name ?? $payment->party->name }} / {{ number_format($payment->purchase->total, 2) }}
                         @else
                             Advance payment
                         @endif
@@ -42,4 +46,3 @@
         </div>
     </div>
 @endsection
-

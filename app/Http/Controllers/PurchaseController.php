@@ -7,13 +7,17 @@ use App\Http\Requests\StorePurchaseRequest;
 use App\Models\Account;
 use App\Models\ExpenseCategory;
 use App\Models\Item;
+use App\Models\ItemLedger;
+use App\Models\Payment;
 use App\Models\Purchase;
+use App\Services\LedgerService;
 use App\Services\PartyCacheService;
 use App\Services\PurchaseService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -23,11 +27,13 @@ class PurchaseController extends Controller
     public function __construct(
         private readonly PurchaseService $service,
         private readonly PartyCacheService $partyCache,
+        private readonly LedgerService $ledger,
     ) {}
 
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Purchase::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $tenantId = (int) ($request->user()?->tenant_id ?? 0);
 
@@ -36,6 +42,7 @@ class PurchaseController extends Controller
             'keyword' => ['nullable', 'string', 'max:120'],
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'show_cancelled' => ['nullable', 'boolean'],
         ]);
 
         $todayBs = DateHelper::getCurrentBS();
@@ -52,15 +59,19 @@ class PurchaseController extends Controller
         $hasSearched = filled($filters['party_id'] ?? null)
             || filled($filters['keyword'] ?? null)
             || filled($filters['from_date_bs'] ?? null)
-            || filled($filters['to_date_bs'] ?? null);
+            || filled($filters['to_date_bs'] ?? null)
+            || filled($filters['show_cancelled'] ?? null);
 
         if ($hasSearched) {
+            $showCancelled = (bool) ($filters['show_cancelled'] ?? false);
+
             $purchases = Purchase::query()
                 ->with(['party', 'payments'])
+                ->when(! $showCancelled, fn ($query) => $query->where('status', Purchase::STATUS_ACTIVE))
                 ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
                 ->when($filters['keyword'] ?? null, function ($query, $keyword) {
                     $term = trim((string) $keyword);
-                    $likeTerm = '%' . $term . '%';
+                    $likeTerm = '%'.$term.'%';
 
                     $query->where(function ($subQuery) use ($term, $likeTerm) {
                         if (is_numeric($term)) {
@@ -109,6 +120,7 @@ class PurchaseController extends Controller
                 'keyword' => $filters['keyword'] ?? null,
                 'from_date_bs' => $filters['from_date_bs'] ?? $todayBs,
                 'to_date_bs' => $filters['to_date_bs'] ?? $todayBs,
+                'show_cancelled' => (bool) ($filters['show_cancelled'] ?? false),
             ],
             'hasSearched' => $hasSearched,
             'currentBsDateInt' => DateHelper::currentBsInt(),
@@ -118,6 +130,7 @@ class PurchaseController extends Controller
     public function create(): View
     {
         $this->authorize('create', Purchase::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $accounts = Account::query()
             ->orderByRaw("case when type = 'cash' then 0 else 1 end")
@@ -137,6 +150,7 @@ class PurchaseController extends Controller
     public function store(StorePurchaseRequest $request): RedirectResponse
     {
         $this->authorize('create', Purchase::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
 
@@ -159,6 +173,7 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase): View
     {
         $this->authorize('view', $purchase);
+        $this->ledger->ensureCompatibilitySchema();
 
         $purchase->load(['party', 'items.item', 'items.expenseCategory']);
         $purchase->created_at_bs = DateHelper::adToBs($purchase->created_at);
@@ -180,11 +195,50 @@ class PurchaseController extends Controller
     public function destroy(Purchase $purchase): RedirectResponse
     {
         $this->authorize('delete', $purchase);
+        $this->ledger->ensureCompatibilitySchema();
 
-        $this->service->delete($purchase);
+        DB::transaction(function () use ($purchase): void {
+            if ($purchase->status === Purchase::STATUS_CANCELLED) {
+                return;
+            }
+
+            $purchase->loadMissing([
+                'payments' => fn ($query) => $query->withTrashed(),
+                'items.item',
+            ]);
+
+            $paymentIds = $purchase->payments->pluck('id')->all();
+
+            $this->ledger->removeEntries('purchases', $purchase->id);
+            $this->ledger->removeEntries('payments', $paymentIds);
+
+            if ($paymentIds !== []) {
+                Payment::withTrashed()
+                    ->whereIn('id', $paymentIds)
+                    ->delete();
+            }
+
+            $itemLineIds = $purchase->items
+                ->where('line_type', 'item')
+                ->pluck('id')
+                ->all();
+
+            foreach ($purchase->items->where('line_type', 'item') as $item) {
+                $item->item?->decrement('qty', (float) $item->qty);
+            }
+
+            if ($itemLineIds !== []) {
+                ItemLedger::query()
+                    ->where('identifier', 'purchase')
+                    ->whereIn('foreign_key', $itemLineIds)
+                    ->delete();
+            }
+
+            $purchase->forceFill(['status' => Purchase::STATUS_CANCELLED])->save();
+        });
 
         return redirect()
             ->route('purchases.index')
-            ->with('success', 'Purchase deleted successfully.');
+            ->with('success', 'Purchase cancelled successfully.');
     }
 }

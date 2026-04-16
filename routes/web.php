@@ -78,6 +78,16 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         ->name('payments.search-sales');
     Route::get('payments/search-purchases', [PaymentController::class, 'searchPurchases'])
         ->name('payments.search-purchases');
+    Route::get('payments/party-balance', [PaymentController::class, 'partyBalance'])
+        ->name('payments.party-balance');
+    Route::get('payments/mass-received', [PaymentController::class, 'createMassReceived'])
+        ->name('payments.mass-received.create');
+    Route::post('payments/mass-received', [PaymentController::class, 'storeMassReceived'])
+        ->name('payments.mass-received.store');
+    Route::get('payments/mass-given', [PaymentController::class, 'createMassGiven'])
+        ->name('payments.mass-given.create');
+    Route::post('payments/mass-given', [PaymentController::class, 'storeMassGiven'])
+        ->name('payments.mass-given.store');
 
     Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show']);
     Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])
@@ -88,6 +98,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
     Route::get('reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
     Route::get('reports/purchases', [ReportController::class, 'purchaseReport'])->name('reports.purchases');
+    Route::get('reports/stock-ledger', [ReportController::class, 'stockLedgerFifo'])->name('reports.stock-ledger');
     Route::get('reports/cashbook', [ReportController::class, 'cashbook'])->name('reports.cashbook');
     Route::get('reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
 });

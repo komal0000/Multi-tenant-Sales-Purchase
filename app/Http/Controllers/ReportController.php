@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Helpers\DateHelper;
 use App\Models\Account;
+use App\Models\BillLineItem;
+use App\Models\Item;
+use App\Models\ItemLedger;
 use App\Models\Ledger;
-use App\Models\Payment;
 use App\Models\Party;
+use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Sale;
+use App\Services\LedgerService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -20,6 +24,8 @@ class ReportController extends Controller
 {
     public function cashbook(Request $request): View
     {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
         $tenantId = (int) ($request->user()?->tenant_id ?? 0);
 
         $filters = $request->validate([
@@ -83,8 +89,8 @@ class ReportController extends Controller
         foreach ($ledgerRows as $row) {
             $payment = $paymentMap->get($row->ref_id);
             $row->reference_text = $payment
-                ? 'Payment / ' . ($payment->party?->name ?? 'Unknown Party')
-                : (ucfirst($row->ref_table) . ' / ' . $row->ref_id);
+                ? 'Payment / '.($payment->party?->name ?? 'Unknown Party')
+                : (ucfirst($row->ref_table).' / '.$row->ref_id);
         }
 
         $periodDebit = (float) $ledgerRows->sum(fn (Ledger $row) => (float) $row->dr_amount);
@@ -107,8 +113,10 @@ class ReportController extends Controller
 
     public function profitLoss(Request $request): View
     {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
         $todayBs = DateHelper::getCurrentBS();
-        $startBs = substr($todayBs, 0, 8) . '01';
+        $startBs = substr($todayBs, 0, 8).'01';
 
         $filters = $request->validate([
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
@@ -148,8 +156,8 @@ class ReportController extends Controller
             $profitLoss = $salesTotal - $purchaseTotal;
 
             $salesDetails = Sale::query()
-                ->withTrashed()
                 ->with('party:id,name')
+                ->where('status', Sale::STATUS_ACTIVE)
                 ->whereDate('created_at', '>=', $fromAd)
                 ->whereDate('created_at', '<=', $toAd)
                 ->orderByDesc('created_at')
@@ -157,8 +165,8 @@ class ReportController extends Controller
                 ->get();
 
             $purchaseDetails = Purchase::query()
-                ->withTrashed()
                 ->with('party:id,name')
+                ->where('status', Purchase::STATUS_ACTIVE)
                 ->whereDate('created_at', '>=', $fromAd)
                 ->whereDate('created_at', '<=', $toAd)
                 ->orderByDesc('created_at')
@@ -191,6 +199,8 @@ class ReportController extends Controller
 
     public function salesReport(Request $request): View
     {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
         $resolved = $this->resolveReportFilters($request);
 
         $parties = Party::query()
@@ -213,8 +223,8 @@ class ReportController extends Controller
 
         if ($resolved['hasSearched']) {
             $sales = Sale::query()
-                ->withTrashed()
                 ->with(['party:id,name,phone', 'items.item:id,name'])
+                ->where('status', Sale::STATUS_ACTIVE)
                 ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
                 ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
                 ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
@@ -247,6 +257,8 @@ class ReportController extends Controller
 
     public function purchaseReport(Request $request): View
     {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
         $resolved = $this->resolveReportFilters($request);
 
         $parties = Party::query()
@@ -269,8 +281,8 @@ class ReportController extends Controller
 
         if ($resolved['hasSearched']) {
             $purchases = Purchase::query()
-                ->withTrashed()
                 ->with(['party:id,name,phone', 'items.item:id,name', 'items.expenseCategory:id,name'])
+                ->where('status', Purchase::STATUS_ACTIVE)
                 ->when($resolved['party_id'], fn ($query, $partyId) => $query->where('party_id', $partyId))
                 ->when($resolved['from_ad'], fn ($query, $fromAd) => $query->whereDate('created_at', '>=', $fromAd))
                 ->when($resolved['to_ad'], fn ($query, $toAd) => $query->whereDate('created_at', '<=', $toAd))
@@ -301,6 +313,155 @@ class ReportController extends Controller
         ]);
     }
 
+    public function stockLedgerFifo(Request $request): View
+    {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        $tenantId = (int) ($request->user()?->tenant_id ?? 0);
+        $todayBs = DateHelper::getCurrentBS();
+        $startBs = substr($todayBs, 0, 8).'01';
+
+        $filters = $request->validate([
+            'item_id' => ['nullable', 'integer', Rule::exists('items', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
+            'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+        ]);
+
+        $hasSearched = filled($filters['item_id'] ?? null)
+            || filled($filters['from_date_bs'] ?? null)
+            || filled($filters['to_date_bs'] ?? null);
+
+        $fromBs = $filters['from_date_bs'] ?? $startBs;
+        $toBs = $filters['to_date_bs'] ?? $todayBs;
+
+        $fromAd = null;
+        $toAd = null;
+
+        if ($hasSearched) {
+            try {
+                [$fromAd, $toAd] = DateHelper::getAdRangeFromBsFilters($fromBs, $toBs);
+            } catch (Throwable $exception) {
+                throw ValidationException::withMessages([
+                    'from_date_bs' => $exception->getMessage(),
+                    'to_date_bs' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $items = Item::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $reportRows = [];
+
+        if ($hasSearched) {
+            $selectedItems = Item::query()
+                ->when($filters['item_id'] ?? null, fn ($query, $itemId) => $query->whereKey($itemId))
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            $itemIds = $selectedItems->pluck('id')->all();
+
+            $ledgerRows = ItemLedger::query()
+                ->whereIn('item_id', $itemIds)
+                ->when($toAd, fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get();
+
+            $references = $this->buildStockLedgerReferences($ledgerRows);
+
+            $reportRows = $selectedItems
+                ->map(function (Item $item) use ($ledgerRows, $references, $fromAd, $toAd): array {
+                    $itemLedgerRows = $ledgerRows->where('item_id', $item->id)->values();
+
+                    $openingLayers = [];
+                    foreach ($itemLedgerRows as $row) {
+                        if ($fromAd && $row->created_at->toDateString() >= $fromAd) {
+                            continue;
+                        }
+
+                        $this->applyFifoMovement($openingLayers, $row);
+                    }
+
+                    $runningLayers = $openingLayers;
+
+                    $periodRows = $itemLedgerRows
+                        ->filter(function (ItemLedger $row) use ($fromAd, $toAd): bool {
+                            $date = $row->created_at->toDateString();
+
+                            if ($fromAd && $date < $fromAd) {
+                                return false;
+                            }
+
+                            if ($toAd && $date > $toAd) {
+                                return false;
+                            }
+
+                            return true;
+                        })
+                        ->values()
+                        ->map(function (ItemLedger $row) use (&$runningLayers, $references): array {
+                            $qty = round((float) $row->qty, 4);
+                            $rate = round((float) $row->rate, 4);
+                            $issueValue = null;
+
+                            if ($row->type === 'in') {
+                                $this->pushFifoLayer($runningLayers, $qty, $rate);
+                            } else {
+                                $issueValue = $this->consumeFifoLayers($runningLayers, $qty, $rate);
+                            }
+
+                            return [
+                                'date_ad' => $row->created_at->toDateString(),
+                                'date_bs' => DateHelper::adToBs($row->created_at->toDateString()),
+                                'reference' => $references[$row->id] ?? ucfirst(str_replace('_', ' ', (string) $row->identifier)),
+                                'movement' => $row->type === 'in' ? 'In' : 'Out',
+                                'in_qty' => $row->type === 'in' ? $qty : null,
+                                'out_qty' => $row->type === 'out' ? $qty : null,
+                                'rate' => $rate,
+                                'issue_value' => $issueValue,
+                                'running_qty' => $this->fifoLayerQty($runningLayers),
+                            ];
+                        })
+                        ->all();
+
+                    $closingLayers = collect($runningLayers)
+                        ->filter(fn (array $layer) => ($layer['qty'] ?? 0) > 0)
+                        ->values()
+                        ->map(fn (array $layer) => [
+                            'qty' => round((float) $layer['qty'], 4),
+                            'rate' => round((float) $layer['rate'], 4),
+                            'value' => round((float) $layer['qty'] * (float) $layer['rate'], 2),
+                        ])
+                        ->all();
+
+                    return [
+                        'item_id' => $item->id,
+                        'item_name' => $item->name,
+                        'opening_qty' => $this->fifoLayerQty($openingLayers),
+                        'opening_value' => $this->fifoLayerValue($openingLayers),
+                        'rows' => $periodRows,
+                        'closing_qty' => $this->fifoLayerQty($runningLayers),
+                        'closing_value' => $this->fifoLayerValue($runningLayers),
+                        'closing_layers' => $closingLayers,
+                    ];
+                })
+                ->all();
+        }
+
+        return view('reports.stock-ledger', [
+            'items' => $items,
+            'filters' => [
+                'item_id' => $filters['item_id'] ?? null,
+                'from_date_bs' => $fromBs,
+                'to_date_bs' => $toBs,
+            ],
+            'hasSearched' => $hasSearched,
+            'reportRows' => $reportRows,
+        ]);
+    }
+
     /**
      * @return array{
      *   party_id: int|null,
@@ -315,7 +476,7 @@ class ReportController extends Controller
     {
         $tenantId = (int) ($request->user()?->tenant_id ?? 0);
         $todayBs = DateHelper::getCurrentBS();
-        $startBs = substr($todayBs, 0, 8) . '01';
+        $startBs = substr($todayBs, 0, 8).'01';
 
         $filters = $request->validate([
             'party_id' => ['nullable', 'integer', Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
@@ -355,7 +516,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, Sale|Purchase> $bills
+     * @param  Collection<int, Sale|Purchase>  $bills
      * @return array<string, mixed>
      */
     private function buildReportSummary(Collection $bills, bool $includeExpense): array
@@ -377,7 +538,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, Sale|Purchase> $bills
+     * @param  Collection<int, Sale|Purchase>  $bills
      * @return array<int, array<string, mixed>>
      */
     private function buildDateWiseRows(Collection $bills, bool $includeExpense): array
@@ -405,7 +566,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, Sale|Purchase> $bills
+     * @param  Collection<int, Sale|Purchase>  $bills
      * @return array<int, array<string, mixed>>
      */
     private function buildPartyWiseRows(Collection $bills, bool $includeExpense): array
@@ -435,7 +596,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, Sale|Purchase> $bills
+     * @param  Collection<int, Sale|Purchase>  $bills
      * @return array<int, array<string, mixed>>
      */
     private function buildDatePartyWiseRows(Collection $bills, bool $includeExpense): array
@@ -480,7 +641,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, mixed> $lineItems
+     * @param  Collection<int, mixed>  $lineItems
      * @return array{generalized: array<int, array<string, mixed>>, item_wise: array<int, array<string, mixed>>, expense_wise: array<int, array<string, mixed>>}
      */
     private function buildLineBreakdown(Collection $lineItems, bool $includeExpense): array
@@ -514,7 +675,7 @@ class ReportController extends Controller
     }
 
     /**
-     * @param Collection<int, mixed> $rows
+     * @param  Collection<int, mixed>  $rows
      * @return array<int, array<string, mixed>>
      */
     private function groupLineRows(Collection $rows, callable $labelResolver): array
@@ -545,5 +706,161 @@ class ReportController extends Controller
 
             return ($account->opening_balance_side ?? 'dr') === 'cr' ? -$amount : $amount;
         });
+    }
+
+    /**
+     * @param  Collection<int, ItemLedger>  $ledgerRows
+     * @return array<int, string>
+     */
+    private function buildStockLedgerReferences(Collection $ledgerRows): array
+    {
+        $lineItemIds = $ledgerRows
+            ->whereIn('identifier', ['sale', 'purchase'])
+            ->pluck('foreign_key')
+            ->filter()
+            ->unique()
+            ->all();
+
+        $lineItems = BillLineItem::query()
+            ->with(['item:id,name', 'expenseCategory:id,name'])
+            ->whereIn('id', $lineItemIds)
+            ->get()
+            ->keyBy('id');
+
+        $sales = Sale::query()
+            ->withTrashed()
+            ->with('party:id,name')
+            ->whereIn('id', $lineItems->where('bill_type', 'sale')->pluck('bill_id')->unique())
+            ->get()
+            ->keyBy('id');
+
+        $purchases = Purchase::query()
+            ->withTrashed()
+            ->with('party:id,name')
+            ->whereIn('id', $lineItems->where('bill_type', 'purchase')->pluck('bill_id')->unique())
+            ->get()
+            ->keyBy('id');
+
+        $references = [];
+
+        foreach ($ledgerRows as $row) {
+            if ($row->identifier === 'opening_stock') {
+                $references[$row->id] = 'Opening Stock';
+
+                continue;
+            }
+
+            $lineItem = $lineItems->get($row->foreign_key);
+
+            if ($row->identifier === 'sale' && $lineItem) {
+                $sale = $sales->get($lineItem->bill_id);
+                $references[$row->id] = sprintf(
+                    'Sale #%d / %s / %s',
+                    (int) $lineItem->bill_id,
+                    $sale?->party?->name ?? 'Unknown Party',
+                    $lineItem->line_label
+                );
+
+                continue;
+            }
+
+            if ($row->identifier === 'purchase' && $lineItem) {
+                $purchase = $purchases->get($lineItem->bill_id);
+                $references[$row->id] = sprintf(
+                    'Purchase #%d / %s / %s',
+                    (int) $lineItem->bill_id,
+                    $purchase?->party?->name ?? 'Unknown Party',
+                    $lineItem->line_label
+                );
+
+                continue;
+            }
+
+            $references[$row->id] = ucfirst(str_replace('_', ' ', (string) $row->identifier));
+        }
+
+        return $references;
+    }
+
+    /**
+     * @param  array<int, array{qty: float, rate: float}>  $layers
+     */
+    private function applyFifoMovement(array &$layers, ItemLedger $row): void
+    {
+        $qty = round((float) $row->qty, 4);
+        $rate = round((float) $row->rate, 4);
+
+        if ($row->type === 'in') {
+            $this->pushFifoLayer($layers, $qty, $rate);
+
+            return;
+        }
+
+        $this->consumeFifoLayers($layers, $qty, $rate);
+    }
+
+    /**
+     * @param  array<int, array{qty: float, rate: float}>  $layers
+     */
+    private function pushFifoLayer(array &$layers, float $qty, float $rate): void
+    {
+        $qty = round($qty, 4);
+
+        if ($qty <= 0) {
+            return;
+        }
+
+        $layers[] = [
+            'qty' => $qty,
+            'rate' => round($rate, 4),
+        ];
+    }
+
+    /**
+     * @param  array<int, array{qty: float, rate: float}>  $layers
+     */
+    private function consumeFifoLayers(array &$layers, float $qty, float $fallbackRate): float
+    {
+        $remaining = round($qty, 4);
+        $value = 0.0;
+
+        while ($remaining > 0.0000 && $layers !== []) {
+            if (($layers[0]['qty'] ?? 0) <= 0.0000) {
+                array_shift($layers);
+
+                continue;
+            }
+
+            $take = min($remaining, (float) $layers[0]['qty']);
+            $value += $take * (float) $layers[0]['rate'];
+            $layers[0]['qty'] = round((float) $layers[0]['qty'] - $take, 4);
+            $remaining = round($remaining - $take, 4);
+
+            if ((float) $layers[0]['qty'] <= 0.0000) {
+                array_shift($layers);
+            }
+        }
+
+        if ($remaining > 0.0000) {
+            $value += $remaining * $fallbackRate;
+        }
+
+        return round($value, 2);
+    }
+
+    /**
+     * @param  array<int, array{qty: float, rate: float}>  $layers
+     */
+    private function fifoLayerQty(array $layers): float
+    {
+        return round((float) collect($layers)->sum(fn (array $layer) => (float) ($layer['qty'] ?? 0)), 4);
+    }
+
+    /**
+     * @param  array<int, array{qty: float, rate: float}>  $layers
+     */
+    private function fifoLayerValue(array $layers): float
+    {
+        return round((float) collect($layers)->sum(fn (array $layer) => ((float) ($layer['qty'] ?? 0)) * ((float) ($layer['rate'] ?? 0))), 2);
     }
 }

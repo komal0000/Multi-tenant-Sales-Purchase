@@ -23,11 +23,11 @@
                 </div>
                 <div class="md:col-span-2">
                     <label for="rate" class="block text-xs font-medium text-gray-600">Sale Rate</label>
-                    <input id="rate" name="rate" type="number" min="0" step="0.01" value="{{ old('rate') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
+                    <input id="rate" name="rate" type="number" min="0" step="0.0001" value="{{ old('rate') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
                 </div>
                 <div class="md:col-span-2">
                     <label for="cost_price" class="block text-xs font-medium text-gray-600">Cost Price</label>
-                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.01" value="{{ old('cost_price') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
+                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.0001" value="{{ old('cost_price') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
                 </div>
                 <div class="md:col-span-2 md:flex md:items-end">
                     <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Save Item</button>
@@ -64,8 +64,8 @@
                             <tr class="border-t border-gray-100">
                                 <td class="px-4 py-3 font-medium text-gray-900">{{ $item->name }}</td>
                                 <td class="px-4 py-3 text-right font-mono">{{ number_format((float) $item->qty, 4) }}</td>
-                                <td class="px-4 py-3 text-right font-mono">{{ number_format((float) $item->rate, 2) }}</td>
-                                <td class="px-4 py-3 text-right font-mono">{{ number_format((float) $item->cost_price, 2) }}</td>
+                                <td class="px-4 py-3 text-right font-mono">{{ number_format((float) $item->rate, 4) }}</td>
+                                <td class="px-4 py-3 text-right font-mono">{{ number_format((float) $item->cost_price, 4) }}</td>
                                 <td class="px-4 py-3 text-xs text-gray-500">{{ $item->created_at?->format('d M Y') }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-3">

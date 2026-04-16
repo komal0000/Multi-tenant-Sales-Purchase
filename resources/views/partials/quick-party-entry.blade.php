@@ -19,7 +19,7 @@
 
             <div>
                 <label for="quick_party_phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                <input id="quick_party_phone" name="phone" type="tel" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional" inputmode="numeric" maxlength="10" pattern="[0-9]{10}">
+                <input id="quick_party_phone" name="phone" type="tel" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
             </div>
 
             <div>
@@ -140,12 +140,6 @@
             phoneInput.value = '';
         }
 
-        function normalizePhoneInput(value) {
-            return String(value ?? '')
-                .replace(/\D+/g, '')
-                .slice(0, 10);
-        }
-
         function formatPartyLabel(party) {
             const parts = [party.name];
 
@@ -234,7 +228,7 @@
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             clearErrors();
-            phoneInput.value = normalizePhoneInput(phoneInput.value);
+            phoneInput.value = phoneInput.value.trim();
 
             submitButton.disabled = true;
 
@@ -277,10 +271,6 @@
             } finally {
                 submitButton.disabled = false;
             }
-        });
-
-        phoneInput.addEventListener('input', () => {
-            phoneInput.value = normalizePhoneInput(phoneInput.value);
         });
     })();
 </script>

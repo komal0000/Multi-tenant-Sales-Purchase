@@ -13,6 +13,10 @@ class Sale extends Model
     use BelongsToTenant;
     use SoftDeletes;
 
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -35,5 +39,10 @@ class Sale extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
     }
 }

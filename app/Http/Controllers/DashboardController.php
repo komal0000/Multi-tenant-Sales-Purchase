@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Ledger;
-use App\Models\Payment;
 use App\Models\Party;
+use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Sale;
+use App\Services\LedgerService;
 use Illuminate\Contracts\View\View;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
         $parties = Party::query()->get(['id', 'opening_balance', 'opening_balance_side']);
         $partyLedgerBalances = Ledger::query()
             ->whereNotNull('party_id')
@@ -22,11 +25,7 @@ class DashboardController extends Controller
             ->pluck('balance', 'party_id');
 
         $partyBalances = $parties->map(function (Party $party) use ($partyLedgerBalances) {
-            $ledgerBalance = (float) ($partyLedgerBalances[$party->id] ?? 0);
-            $opening = (float) ($party->opening_balance ?? 0);
-            $openingSigned = ($party->opening_balance_side ?? 'dr') === 'cr' ? -$opening : $opening;
-
-            return $ledgerBalance + $openingSigned;
+            return (float) ($partyLedgerBalances[$party->id] ?? 0);
         });
 
         $accounts = Account::query()
@@ -51,8 +50,8 @@ class DashboardController extends Controller
             'totalReceivable' => (float) $partyBalances->filter(fn ($balance) => $balance > 0)->sum(),
             'totalPayable' => abs((float) $partyBalances->filter(fn ($balance) => $balance < 0)->sum()),
             'accounts' => $accounts,
-            'recentSales' => Sale::query()->with('party')->latest()->limit(5)->get(),
-            'recentPurchases' => Purchase::query()->with('party')->latest()->limit(5)->get(),
+            'recentSales' => Sale::query()->with('party')->where('status', Sale::STATUS_ACTIVE)->latest()->limit(5)->get(),
+            'recentPurchases' => Purchase::query()->with('party')->where('status', Purchase::STATUS_ACTIVE)->latest()->limit(5)->get(),
             'recentPayments' => Payment::query()->with(['party', 'account'])->latest()->limit(5)->get(),
         ]);
     }

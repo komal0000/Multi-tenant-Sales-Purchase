@@ -7,6 +7,7 @@ use App\Http\Requests\UpdatePayrollSettingsRequest;
 use App\Http\Requests\UpdateSettingsUserRequest;
 use App\Models\PayrollSetting;
 use App\Models\User;
+use App\Services\LedgerService;
 use App\Support\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,13 +16,19 @@ use Illuminate\Support\Facades\Auth;
 
 class SettingsController extends Controller
 {
-    public function __construct(private readonly TenantContext $tenantContext) {}
+    public function __construct(
+        private readonly TenantContext $tenantContext,
+        private readonly LedgerService $ledger,
+    ) {}
 
     public function index(Request $request): View
     {
+        $this->ledger->ensureCompatibilitySchema();
+
         $payrollSetting = PayrollSetting::query()->firstOrCreate([], [
             'leave_fine_per_day' => 0,
             'overtime_money_per_day' => 0,
+            'payment_sidebar_limit' => 10,
         ]);
 
         $filters = $request->validate([
@@ -34,7 +41,7 @@ class SettingsController extends Controller
             ->where('tenant_id', $tenantId)
             ->where('role', 1)
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
-                $term = '%' . trim((string) $keyword) . '%';
+                $term = '%'.trim((string) $keyword).'%';
 
                 $query->where(function ($subQuery) use ($term) {
                     $subQuery
@@ -57,11 +64,14 @@ class SettingsController extends Controller
 
     public function updatePayroll(UpdatePayrollSettingsRequest $request): RedirectResponse
     {
+        $this->ledger->ensureCompatibilitySchema();
+
         $validated = $request->validated();
 
         $setting = PayrollSetting::query()->firstOrCreate([], [
             'leave_fine_per_day' => 0,
             'overtime_money_per_day' => 0,
+            'payment_sidebar_limit' => 10,
         ]);
 
         $setting->update($validated);

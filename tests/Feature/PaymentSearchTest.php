@@ -6,6 +6,7 @@ use App\Models\Party;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\LedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -83,6 +84,40 @@ class PaymentSearchTest extends TestCase
             ->assertJsonPath('pagination.more', false);
     }
 
+    public function test_sales_search_excludes_cancelled_sales(): void
+    {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Cancelled Sales Party',
+            'phone' => null,
+        ]);
+
+        $activeSale = Sale::query()->create([
+            'party_id' => $party->id,
+            'total' => 100,
+            'status' => Sale::STATUS_ACTIVE,
+        ]);
+
+        Sale::query()->create([
+            'party_id' => $party->id,
+            'total' => 200,
+            'status' => Sale::STATUS_CANCELLED,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson(route('payments.search-sales', ['party_id' => $party->id]));
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.id', (string) $activeSale->id)
+            ->assertJsonPath('pagination.more', false);
+    }
+
     public function test_purchase_search_returns_paginated_results_for_selected_party(): void
     {
         /** @var User $user */
@@ -137,5 +172,39 @@ class PaymentSearchTest extends TestCase
             ->whereIn('id', $secondPageIds)
             ->where('party_id', '!=', $partyA->id)
             ->count());
+    }
+
+    public function test_purchase_search_excludes_cancelled_purchases(): void
+    {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Cancelled Purchases Party',
+            'phone' => null,
+        ]);
+
+        $activePurchase = Purchase::query()->create([
+            'party_id' => $party->id,
+            'total' => 120,
+            'status' => Purchase::STATUS_ACTIVE,
+        ]);
+
+        Purchase::query()->create([
+            'party_id' => $party->id,
+            'total' => 240,
+            'status' => Purchase::STATUS_CANCELLED,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson(route('payments.search-purchases', ['party_id' => $party->id]));
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.id', (string) $activePurchase->id)
+            ->assertJsonPath('pagination.more', false);
     }
 }

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('account_id')->constrained('accounts');
             $table->foreignId('sale_id')->nullable()->constrained('sales');
             $table->foreignId('purchase_id')->nullable()->constrained('purchases');
+            $table->string('notes', 255)->nullable();
             $table->timestamps();
         });
     }

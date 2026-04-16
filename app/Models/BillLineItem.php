@@ -18,7 +18,7 @@ class BillLineItem extends Model
     {
         return [
             'qty' => 'decimal:4',
-            'rate' => 'decimal:2',
+            'rate' => 'decimal:4',
             'total' => 'decimal:2',
         ];
     }

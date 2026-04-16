@@ -7,7 +7,11 @@
                 <h1 class="text-2xl font-semibold text-gray-900 sm:text-3xl">Payments</h1>
                 <p class="text-sm text-gray-500">Search payments first to load results quickly for large datasets.</p>
             </div>
-            <a href="{{ route('payments.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Payment</a>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <a href="{{ route('payments.mass-received.create') }}" class="inline-flex items-center justify-center rounded-lg border border-green-300 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-100">Mass Received</a>
+                <a href="{{ route('payments.mass-given.create') }}" class="inline-flex items-center justify-center rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100">Mass Given</a>
+                <a href="{{ route('payments.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Payment</a>
+            </div>
         </div>
 
         <form method="GET" action="{{ route('payments.index') }}" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-6 md:items-end">
@@ -82,9 +86,9 @@
                                 <td class="px-5 py-4 text-gray-500">{{ $payment->cheque_number ?: '-' }}</td>
                                 <td class="px-5 py-4 text-gray-500">
                                     @if ($payment->sale)
-                                        Sale / {{ number_format($payment->sale->total, 2) }}
+                                        Sale #{{ $payment->sale->id }} / {{ number_format($payment->sale->total, 2) }}
                                     @elseif ($payment->purchase)
-                                        Purchase / {{ number_format($payment->purchase->total, 2) }}
+                                        Purchase #{{ $payment->purchase->id }} / {{ number_format($payment->purchase->total, 2) }}
                                     @else
                                         Advance
                                     @endif
@@ -92,7 +96,7 @@
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-end gap-4">
                                         <a href="{{ route('payments.show', $payment) }}" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
-                                        <form action="{{ route('payments.destroy', $payment) }}" method="POST" onsubmit="return confirm('Delete this payment? This will reverse the ledger entries.')">
+                                        <form action="{{ route('payments.destroy', $payment) }}" method="POST" onsubmit="return confirm('Delete this payment? This will remove its ledger entries.')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-sm text-red-500 hover:text-red-700">Delete</button>
@@ -139,7 +143,7 @@
                     </div>
                     <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
                         <a href="{{ route('payments.show', $payment) }}" class="text-sm font-medium text-indigo-600">View Detail</a>
-                        <form action="{{ route('payments.destroy', $payment) }}" method="POST" onsubmit="return confirm('Delete this payment? This will reverse the ledger entries.')">
+                        <form action="{{ route('payments.destroy', $payment) }}" method="POST" onsubmit="return confirm('Delete this payment? This will remove its ledger entries.')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="text-sm font-medium text-red-500">Delete</button>

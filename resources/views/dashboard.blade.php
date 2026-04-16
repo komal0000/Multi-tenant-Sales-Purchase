@@ -80,6 +80,35 @@
                     @endforeach
                 </div>
             </section>
+
+            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Reports</h2>
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Analysis</span>
+                </div>
+                @php
+                    $reportLinks = [
+                        ['label' => 'Sales Report', 'route' => 'reports.sales', 'icon' => 'sales', 'hint' => 'Date and party-wise sales view'],
+                        ['label' => 'Purchase Report', 'route' => 'reports.purchases', 'icon' => 'purchases', 'hint' => 'Vendor and expense breakdowns'],
+                        ['label' => 'Stock FIFO', 'route' => 'reports.stock-ledger', 'icon' => 'items', 'hint' => 'FIFO movement and layer valuation'],
+                        ['label' => 'Cashbook', 'route' => 'reports.cashbook', 'icon' => 'cashbook', 'hint' => 'Cash account movement summary'],
+                        ['label' => 'Profit / Loss', 'route' => 'reports.profit-loss', 'icon' => 'profit-loss', 'hint' => 'Period profitability snapshot'],
+                    ];
+                @endphp
+                <div class="grid gap-3 sm:grid-cols-2">
+                    @foreach ($reportLinks as $link)
+                        <a href="{{ route($link['route']) }}" class="group flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/40">
+                            <span class="quick-shortcut-icon inline-flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition group-hover:bg-indigo-100 group-hover:text-indigo-700">
+                                @include('partials.nav-icon', ['name' => $link['icon'], 'class' => 'h-4 w-4'])
+                            </span>
+                            <span>
+                                <span class="block text-sm font-semibold text-gray-900">{{ $link['label'] }}</span>
+                                <span class="block text-xs text-gray-500">{{ $link['hint'] }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
         </div>
 
         <div class="grid gap-6 xl:grid-cols-3">

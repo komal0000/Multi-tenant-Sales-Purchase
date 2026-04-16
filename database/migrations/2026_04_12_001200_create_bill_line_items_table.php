@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignId('expense_category_id')->nullable()->constrained('expense_categories')->nullOnDelete();
             $table->decimal('qty', 15, 4)->nullable();
-            $table->decimal('rate', 15, 2);
+            $table->decimal('rate', 15, 4);
             $table->decimal('total', 15, 2);
 
             $table->index(['bill_type', 'bill_id']);

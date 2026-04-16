@@ -6,13 +6,17 @@ use App\Helpers\DateHelper;
 use App\Http\Requests\StoreSaleRequest;
 use App\Models\Account;
 use App\Models\Item;
+use App\Models\ItemLedger;
+use App\Models\Payment;
 use App\Models\Sale;
+use App\Services\LedgerService;
 use App\Services\PartyCacheService;
 use App\Services\SaleService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -22,11 +26,13 @@ class SaleController extends Controller
     public function __construct(
         private readonly SaleService $service,
         private readonly PartyCacheService $partyCache,
+        private readonly LedgerService $ledger,
     ) {}
 
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Sale::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $tenantId = (int) ($request->user()?->tenant_id ?? 0);
 
@@ -35,6 +41,7 @@ class SaleController extends Controller
             'keyword' => ['nullable', 'string', 'max:120'],
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
             'to_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'show_cancelled' => ['nullable', 'boolean'],
         ]);
 
         $todayBs = DateHelper::getCurrentBS();
@@ -51,15 +58,19 @@ class SaleController extends Controller
         $hasSearched = filled($filters['party_id'] ?? null)
             || filled($filters['keyword'] ?? null)
             || filled($filters['from_date_bs'] ?? null)
-            || filled($filters['to_date_bs'] ?? null);
+            || filled($filters['to_date_bs'] ?? null)
+            || filled($filters['show_cancelled'] ?? null);
 
         if ($hasSearched) {
+            $showCancelled = (bool) ($filters['show_cancelled'] ?? false);
+
             $sales = Sale::query()
                 ->with(['party', 'payments'])
+                ->when(! $showCancelled, fn ($query) => $query->where('status', Sale::STATUS_ACTIVE))
                 ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
                 ->when($filters['keyword'] ?? null, function ($query, $keyword) {
                     $term = trim((string) $keyword);
-                    $likeTerm = '%' . $term . '%';
+                    $likeTerm = '%'.$term.'%';
 
                     $query->where(function ($subQuery) use ($term, $likeTerm) {
                         if (is_numeric($term)) {
@@ -108,6 +119,7 @@ class SaleController extends Controller
                 'keyword' => $filters['keyword'] ?? null,
                 'from_date_bs' => $filters['from_date_bs'] ?? $todayBs,
                 'to_date_bs' => $filters['to_date_bs'] ?? $todayBs,
+                'show_cancelled' => (bool) ($filters['show_cancelled'] ?? false),
             ],
             'hasSearched' => $hasSearched,
             'currentBsDateInt' => DateHelper::currentBsInt(),
@@ -117,6 +129,7 @@ class SaleController extends Controller
     public function create(): View
     {
         $this->authorize('create', Sale::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $accounts = Account::query()
             ->orderByRaw("case when type = 'cash' then 0 else 1 end")
@@ -135,6 +148,7 @@ class SaleController extends Controller
     public function store(StoreSaleRequest $request): RedirectResponse
     {
         $this->authorize('create', Sale::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
 
@@ -157,6 +171,7 @@ class SaleController extends Controller
     public function show(Sale $sale): View
     {
         $this->authorize('view', $sale);
+        $this->ledger->ensureCompatibilitySchema();
 
         $sale->load(['party', 'items.item', 'items.expenseCategory']);
         $sale->created_at_bs = DateHelper::adToBs($sale->created_at);
@@ -178,11 +193,50 @@ class SaleController extends Controller
     public function destroy(Sale $sale): RedirectResponse
     {
         $this->authorize('delete', $sale);
+        $this->ledger->ensureCompatibilitySchema();
 
-        $this->service->delete($sale);
+        DB::transaction(function () use ($sale): void {
+            if ($sale->status === Sale::STATUS_CANCELLED) {
+                return;
+            }
+
+            $sale->loadMissing([
+                'payments' => fn ($query) => $query->withTrashed(),
+                'items.item',
+            ]);
+
+            $paymentIds = $sale->payments->pluck('id')->all();
+
+            $this->ledger->removeEntries('sales', $sale->id);
+            $this->ledger->removeEntries('payments', $paymentIds);
+
+            if ($paymentIds !== []) {
+                Payment::withTrashed()
+                    ->whereIn('id', $paymentIds)
+                    ->delete();
+            }
+
+            $itemLineIds = $sale->items
+                ->where('line_type', 'item')
+                ->pluck('id')
+                ->all();
+
+            foreach ($sale->items->where('line_type', 'item') as $item) {
+                $item->item?->increment('qty', (float) $item->qty);
+            }
+
+            if ($itemLineIds !== []) {
+                ItemLedger::query()
+                    ->where('identifier', 'sale')
+                    ->whereIn('foreign_key', $itemLineIds)
+                    ->delete();
+            }
+
+            $sale->forceFill(['status' => Sale::STATUS_CANCELLED])->save();
+        });
 
         return redirect()
             ->route('sales.index')
-            ->with('success', 'Sale deleted successfully.');
+            ->with('success', 'Sale cancelled successfully.');
     }
 }

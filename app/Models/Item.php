@@ -16,8 +16,8 @@ class Item extends Model
     {
         return [
             'qty' => 'decimal:4',
-            'rate' => 'decimal:2',
-            'cost_price' => 'decimal:2',
+            'rate' => 'decimal:4',
+            'cost_price' => 'decimal:4',
         ];
     }
 

@@ -7,16 +7,12 @@ use App\Http\Requests\StorePartyRequest;
 use App\Http\Requests\UpdatePartyOpeningBalanceRequest;
 use App\Models\Ledger;
 use App\Models\Party;
-use App\Models\Payment;
-use App\Models\Purchase;
-use App\Models\Sale;
 use App\Services\LedgerService;
 use App\Services\PartyCacheService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -30,6 +26,7 @@ class PartyController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Party::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $filters = $request->validate([
             'keyword' => ['nullable', 'string', 'max:255'],
@@ -37,7 +34,7 @@ class PartyController extends Controller
 
         $parties = Party::query()
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
-                $term = '%' . trim((string) $keyword) . '%';
+                $term = '%'.trim((string) $keyword).'%';
 
                 $query->where(function ($subQuery) use ($term) {
                     $subQuery
@@ -61,9 +58,7 @@ class PartyController extends Controller
 
         $parties->setCollection(
             $parties->getCollection()->map(function (Party $party) use ($ledgerBalances) {
-                $opening = (float) ($party->opening_balance ?? 0);
-                $openingSigned = ($party->opening_balance_side ?? 'dr') === 'cr' ? -$opening : $opening;
-                $party->balance = (float) ($ledgerBalances[$party->id] ?? 0) + $openingSigned;
+                $party->balance = (float) ($ledgerBalances[$party->id] ?? 0);
 
                 return $party;
             })
@@ -80,6 +75,7 @@ class PartyController extends Controller
     public function store(StorePartyRequest $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', Party::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
 
@@ -87,6 +83,7 @@ class PartyController extends Controller
         $validated['opening_balance_side'] = $validated['opening_balance_side'] ?? 'dr';
 
         $party = Party::query()->create($validated);
+        $this->ledger->syncPartyOpeningBalance($party);
 
         $this->partyCache->refreshAll();
 
@@ -112,6 +109,7 @@ class PartyController extends Controller
     public function show(Party $party): View
     {
         $this->authorize('view', $party);
+        $this->ledger->ensureCompatibilitySchema();
 
         return view('parties.show', [
             'party' => $party->loadCount(['sales', 'purchases', 'payments']),
@@ -123,6 +121,7 @@ class PartyController extends Controller
     public function ledgerStatement(Request $request, Party $party): View
     {
         $this->authorize('view', $party);
+        $this->ledger->ensureCompatibilitySchema();
 
         $filters = $request->validate([
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
@@ -140,9 +139,7 @@ class PartyController extends Controller
 
         $query = Ledger::query()->where('party_id', $party->id);
 
-        $openingBase = $this->openingSigned((float) ($party->opening_balance ?? 0), $party->opening_balance_side ?? 'dr');
-
-        $openingBalance = $openingBase + ((clone $query)
+        $openingBalance = ((clone $query)
             ->when($fromAd, fn ($builder) => $builder->whereDate('created_at', '<', $fromAd))
             ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
             ->value('balance') ?? 0);
@@ -154,12 +151,13 @@ class PartyController extends Controller
             ->orderBy('id')
             ->get();
 
-        $this->attachReferenceText($ledgerRows);
+        $this->ledger->attachReferenceText($ledgerRows);
 
         return view('parties.ledger', [
             'party' => $party,
             'ledgerRows' => $ledgerRows,
             'openingBalance' => (float) $openingBalance,
+            'currentBalance' => $this->ledger->partyBalance($party->id),
             'filters' => [
                 'from_date_bs' => $filters['from_date_bs'] ?? null,
                 'to_date_bs' => $filters['to_date_bs'] ?? null,
@@ -170,6 +168,7 @@ class PartyController extends Controller
     public function updateOpeningBalance(UpdatePartyOpeningBalanceRequest $request, Party $party): RedirectResponse
     {
         $this->authorize('update', $party);
+        $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validated();
 
@@ -177,78 +176,11 @@ class PartyController extends Controller
             'opening_balance' => (float) $validated['opening_balance'],
             'opening_balance_side' => $validated['opening_balance_side'],
         ]);
+        $this->ledger->syncPartyOpeningBalance($party);
 
         return redirect()
             ->route('parties.show', $party)
             ->with('success', 'Opening balance updated successfully.');
-    }
-
-    private function attachReferenceText(Collection $ledgerRows): void
-    {
-        $saleMap = Sale::query()
-            ->with(['items.item:id,name', 'items.expenseCategory:id,name'])
-            ->whereIn('id', $ledgerRows->where('ref_table', 'sales')->pluck('ref_id')->unique())
-            ->get()
-            ->keyBy('id');
-
-        $purchaseMap = Purchase::query()
-            ->with(['items.item:id,name', 'items.expenseCategory:id,name'])
-            ->whereIn('id', $ledgerRows->where('ref_table', 'purchases')->pluck('ref_id')->unique())
-            ->get()
-            ->keyBy('id');
-
-        $paymentMap = Payment::query()
-            ->with('account:id,name')
-            ->whereIn('id', $ledgerRows->where('ref_table', 'payments')->pluck('ref_id')->unique())
-            ->get()
-            ->keyBy('id');
-
-        foreach ($ledgerRows as $row) {
-            if ($row->ref_table === 'sales') {
-                $sale = $saleMap->get($row->ref_id);
-                $row->reference_text = $sale
-                    ? 'Sale / '.$this->itemSummary($sale->items)
-                    : 'Sale / '.$row->ref_id;
-
-                continue;
-            }
-
-            if ($row->ref_table === 'purchases') {
-                $purchase = $purchaseMap->get($row->ref_id);
-                $row->reference_text = $purchase
-                    ? 'Purchase / '.$this->itemSummary($purchase->items)
-                    : 'Purchase / '.$row->ref_id;
-
-                continue;
-            }
-
-            if ($row->ref_table === 'payments') {
-                $payment = $paymentMap->get($row->ref_id);
-                $row->reference_text = $payment
-                    ? 'Payment / '.($payment->account?->name ?? 'Unknown Account')
-                    : 'Payment / '.$row->ref_id;
-
-                continue;
-            }
-
-            $row->reference_text = ucfirst($row->ref_table).' / '.$row->ref_id;
-        }
-    }
-
-    private function itemSummary(Collection $items): string
-    {
-        if ($items->isEmpty()) {
-            return 'No items';
-        }
-
-        return $items
-            ->map(fn ($item) => sprintf(
-                '%s @ %s * %s',
-                $item->line_label,
-                number_format((float) $item->rate, 2),
-                number_format((float) $item->qty, 2)
-            ))
-            ->implode(', ');
     }
 
     private function openingSigned(float $amount, string $side): float
@@ -259,6 +191,7 @@ class PartyController extends Controller
     public function destroy(Party $party): RedirectResponse
     {
         $this->authorize('delete', $party);
+        $this->ledger->ensureCompatibilitySchema();
 
         $party->delete();
 

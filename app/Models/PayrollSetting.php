@@ -14,5 +14,6 @@ class PayrollSetting extends Model
     protected $casts = [
         'leave_fine_per_day' => 'decimal:2',
         'overtime_money_per_day' => 'decimal:2',
+        'payment_sidebar_limit' => 'integer',
     ];
 }

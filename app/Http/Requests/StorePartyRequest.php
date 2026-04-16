@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Support\NepalPhone;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePartyRequest extends FormRequest
@@ -18,10 +17,6 @@ class StorePartyRequest extends FormRequest
         $phone = $this->input('phone');
         $phone = filled($phone) ? trim((string) $phone) : null;
 
-        if ($phone !== null && preg_match(NepalPhone::INPUT_PATTERN, $phone) === 1) {
-            $phone = NepalPhone::normalizeForStorage($phone);
-        }
-
         $this->merge([
             'name' => trim((string) $this->input('name', '')),
             'phone' => $phone,
@@ -33,7 +28,7 @@ class StorePartyRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'regex:' . NepalPhone::STORAGE_PATTERN],
+            'phone' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
             'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'opening_balance_side' => ['nullable', 'in:dr,cr'],

@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\ExpenseCategory;
 use App\Models\Item;
 use App\Models\ItemLedger;
 use App\Models\Ledger;
 use App\Models\Party;
+use App\Models\Payment;
+use App\Models\Purchase;
+use App\Models\Sale;
 use App\Models\User;
 use App\Services\LedgerService;
 use App\Services\PaymentService;
@@ -97,10 +101,82 @@ class LedgerFlowsTest extends TestCase
         $this->assertSame(200.0, $ledger->accountBalance($cash->id));
     }
 
-    public function test_payment_delete_is_soft_delete_and_reverses_ledger(): void
+    public function test_payment_store_honors_standalone_direction_and_forces_linked_bill_direction(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'name' => 'Direction Party',
+            'phone' => null,
+        ]);
+
+        $sale = Sale::query()->create([
+            'party_id' => $party->id,
+            'total' => 1000,
+        ]);
+
+        $purchase = Purchase::query()->create([
+            'party_id' => $party->id,
+            'total' => 500,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 125,
+                'type' => 'given',
+                'account_id' => $cash->id,
+            ])
+            ->assertRedirect();
+
+        $standalonePayment = Payment::query()->latest('id')->firstOrFail();
+        $this->assertSame('given', $standalonePayment->type);
+        $this->assertNull($standalonePayment->sale_id);
+        $this->assertNull($standalonePayment->purchase_id);
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 200,
+                'type' => 'given',
+                'account_id' => $cash->id,
+                'sale_id' => $sale->id,
+            ])
+            ->assertRedirect();
+
+        $salePayment = Payment::query()->latest('id')->firstOrFail();
+        $this->assertSame('received', $salePayment->type);
+        $this->assertSame($sale->id, $salePayment->sale_id);
+        $this->assertNull($salePayment->purchase_id);
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 75,
+                'type' => 'received',
+                'account_id' => $cash->id,
+                'purchase_id' => $purchase->id,
+            ])
+            ->assertRedirect();
+
+        $purchasePayment = Payment::query()->latest('id')->firstOrFail();
+        $this->assertSame('given', $purchasePayment->type);
+        $this->assertSame($purchase->id, $purchasePayment->purchase_id);
+        $this->assertNull($purchasePayment->sale_id);
+    }
+
+    public function test_payment_delete_is_soft_delete_and_removes_ledger_entries(): void
     {
         $ledger = app(LedgerService::class);
         $paymentService = app(PaymentService::class);
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
 
         $cash = Account::query()->create([
             'name' => 'Cash',
@@ -123,23 +199,35 @@ class LedgerFlowsTest extends TestCase
 
         $this->assertSame(-400.0, $ledger->partyBalance($party->id));
         $this->assertSame(400.0, $ledger->accountBalance($cash->id));
+        $this->assertSame(2, Ledger::query()->count());
 
-        $paymentService->delete($payment);
+        $this->actingAs($admin)
+            ->delete(route('payments.destroy', $payment))
+            ->assertRedirect(route('payments.index'));
 
         $this->assertSoftDeleted('payments', ['id' => $payment->id]);
         $this->assertSame(0.0, $ledger->partyBalance($party->id));
         $this->assertSame(0.0, $ledger->accountBalance($cash->id));
-        $this->assertSame(4, Ledger::query()->count());
+        $this->assertSame(0, Ledger::query()->count());
     }
 
-    public function test_sale_delete_reverses_sale_and_linked_payments(): void
+    public function test_sale_delete_marks_bill_cancelled_and_removes_linked_ledgers(): void
     {
         $ledger = app(LedgerService::class);
         $saleService = app(SaleService::class);
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
 
         $cash = Account::query()->create([
             'name' => 'Cash',
             'type' => 'cash',
+        ]);
+
+        $item = Item::query()->create([
+            'name' => 'Delete Sale Item',
+            'qty' => 10,
+            'rate' => 500,
+            'cost_price' => 250,
         ]);
 
         $party = Party::query()->create([
@@ -151,10 +239,10 @@ class LedgerFlowsTest extends TestCase
             'party_id' => $party->id,
             'items' => [
                 [
-                    'line_type' => 'general',
-                    'description' => 'Goods',
-                    'qty' => 1,
-                    'rate' => 1000,
+                    'line_type' => 'item',
+                    'item_id' => $item->id,
+                    'qty' => 2,
+                    'rate' => 500,
                 ],
             ],
             'payments' => [
@@ -170,24 +258,46 @@ class LedgerFlowsTest extends TestCase
 
         $this->assertSame(600.0, $ledger->partyBalance($party->id));
         $this->assertSame(400.0, $ledger->accountBalance($cash->id));
+        $item->refresh();
+        $this->assertEqualsWithDelta(8.0, (float) $item->qty, 0.0001);
+        $this->assertSame(2, ItemLedger::query()->count());
 
-        $saleService->delete($sale);
+        $this->actingAs($admin)
+            ->delete(route('sales.destroy', $sale))
+            ->assertRedirect(route('sales.index'));
 
-        $this->assertSoftDeleted('sales', ['id' => $sale->id]);
+        $this->assertDatabaseHas('sales', [
+            'id' => $sale->id,
+            'status' => Sale::STATUS_CANCELLED,
+            'deleted_at' => null,
+        ]);
         $this->assertSoftDeleted('payments', ['id' => $paymentId]);
         $this->assertSame(0.0, $ledger->partyBalance($party->id));
         $this->assertSame(0.0, $ledger->accountBalance($cash->id));
-        $this->assertSame(6, Ledger::query()->count());
+        $this->assertSame(0, Ledger::query()->count());
+        $this->assertSame(1, ItemLedger::query()->count());
+
+        $item->refresh();
+        $this->assertEqualsWithDelta(10.0, (float) $item->qty, 0.0001);
     }
 
-    public function test_purchase_delete_reverses_purchase_and_linked_payments(): void
+    public function test_purchase_delete_marks_bill_cancelled_and_removes_linked_ledgers(): void
     {
         $ledger = app(LedgerService::class);
         $purchaseService = app(PurchaseService::class);
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
 
         $cash = Account::query()->create([
             'name' => 'Cash',
             'type' => 'cash',
+        ]);
+
+        $item = Item::query()->create([
+            'name' => 'Delete Purchase Item',
+            'qty' => 3,
+            'rate' => 350,
+            'cost_price' => 150,
         ]);
 
         $party = Party::query()->create([
@@ -199,10 +309,10 @@ class LedgerFlowsTest extends TestCase
             'party_id' => $party->id,
             'items' => [
                 [
-                    'line_type' => 'general',
-                    'description' => 'Raw Material',
-                    'qty' => 1,
-                    'rate' => 500,
+                    'line_type' => 'item',
+                    'item_id' => $item->id,
+                    'qty' => 2,
+                    'rate' => 250,
                 ],
             ],
             'payments' => [
@@ -218,14 +328,27 @@ class LedgerFlowsTest extends TestCase
 
         $this->assertSame(-300.0, $ledger->partyBalance($party->id));
         $this->assertSame(-200.0, $ledger->accountBalance($cash->id));
+        $item->refresh();
+        $this->assertEqualsWithDelta(5.0, (float) $item->qty, 0.0001);
+        $this->assertSame(2, ItemLedger::query()->count());
 
-        $purchaseService->delete($purchase);
+        $this->actingAs($admin)
+            ->delete(route('purchases.destroy', $purchase))
+            ->assertRedirect(route('purchases.index'));
 
-        $this->assertSoftDeleted('purchases', ['id' => $purchase->id]);
+        $this->assertDatabaseHas('purchases', [
+            'id' => $purchase->id,
+            'status' => Purchase::STATUS_CANCELLED,
+            'deleted_at' => null,
+        ]);
         $this->assertSoftDeleted('payments', ['id' => $paymentId]);
         $this->assertSame(0.0, $ledger->partyBalance($party->id));
         $this->assertSame(0.0, $ledger->accountBalance($cash->id));
-        $this->assertSame(6, Ledger::query()->count());
+        $this->assertSame(0, Ledger::query()->count());
+        $this->assertSame(1, ItemLedger::query()->count());
+
+        $item->refresh();
+        $this->assertEqualsWithDelta(3.0, (float) $item->qty, 0.0001);
     }
 
     public function test_item_lines_create_item_ledger_entries_using_cost_price_rate(): void
@@ -425,10 +548,12 @@ class LedgerFlowsTest extends TestCase
         $this->assertSame(0, ItemLedger::query()->count());
     }
 
-    public function test_item_qty_cache_matches_net_item_ledger_after_reversals(): void
+    public function test_item_qty_cache_matches_net_item_ledger_after_cancellations(): void
     {
         $saleService = app(SaleService::class);
         $purchaseService = app(PurchaseService::class);
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
 
         $item = Item::query()->create([
             'name' => 'Reversal Item',
@@ -476,11 +601,17 @@ class LedgerFlowsTest extends TestCase
         $item->refresh();
         $this->assertEqualsWithDelta(4.0, (float) $item->qty, 0.0001);
 
-        $saleService->delete($sale);
+        $this->actingAs($admin)
+            ->delete(route('sales.destroy', $sale))
+            ->assertRedirect(route('sales.index'));
+
         $item->refresh();
         $this->assertEqualsWithDelta(7.0, (float) $item->qty, 0.0001);
 
-        $purchaseService->delete($purchase);
+        $this->actingAs($admin)
+            ->delete(route('purchases.destroy', $purchase))
+            ->assertRedirect(route('purchases.index'));
+
         $item->refresh();
         $this->assertEqualsWithDelta(0.0, (float) $item->qty, 0.0001);
 
@@ -490,6 +621,7 @@ class LedgerFlowsTest extends TestCase
             ->reduce(fn (float $carry, ItemLedger $entry) => $carry + (($entry->type === 'in' ? 1 : -1) * (float) $entry->qty), 0.0);
 
         $this->assertEqualsWithDelta($netMovement, (float) $item->qty, 0.0001);
+        $this->assertSame(0, ItemLedger::query()->count());
     }
 
     public function test_dashboard_totals_include_opening_balances(): void
@@ -518,6 +650,127 @@ class LedgerFlowsTest extends TestCase
         $response->assertOk();
         $response->assertViewHas('totalReceivable', 200.0);
         $response->assertViewHas('totalPayable', 300.0);
+        $this->assertSame(2, Ledger::query()->where('type', 'opening_balance')->count());
+    }
+
+    public function test_sales_index_hides_cancelled_sales_unless_requested(): void
+    {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Sales Filter Party',
+            'phone' => null,
+        ]);
+
+        $activeSale = Sale::query()->create([
+            'party_id' => $party->id,
+            'total' => 100,
+            'status' => Sale::STATUS_ACTIVE,
+            'created_at' => '2026-04-03 10:00:00',
+            'updated_at' => '2026-04-03 10:00:00',
+        ]);
+
+        $cancelledSale = Sale::query()->create([
+            'party_id' => $party->id,
+            'total' => 200,
+            'status' => Sale::STATUS_CANCELLED,
+            'created_at' => '2026-04-03 12:00:00',
+            'updated_at' => '2026-04-03 12:00:00',
+        ]);
+
+        $dateBs = DateHelper::adToBs('2026-04-03');
+
+        $defaultResponse = $this->actingAs($user)->get(route('sales.index', [
+            'from_date_bs' => $dateBs,
+            'to_date_bs' => $dateBs,
+        ]));
+
+        $defaultResponse
+            ->assertOk()
+            ->assertViewHas('sales', function ($sales) use ($activeSale, $cancelledSale): bool {
+                $ids = $sales->getCollection()->pluck('id')->all();
+
+                return in_array($activeSale->id, $ids, true)
+                    && ! in_array($cancelledSale->id, $ids, true);
+            });
+
+        $withCancelledResponse = $this->actingAs($user)->get(route('sales.index', [
+            'from_date_bs' => $dateBs,
+            'to_date_bs' => $dateBs,
+            'show_cancelled' => 1,
+        ]));
+
+        $withCancelledResponse
+            ->assertOk()
+            ->assertViewHas('sales', function ($sales) use ($activeSale, $cancelledSale): bool {
+                $ids = $sales->getCollection()->pluck('id')->all();
+
+                return in_array($activeSale->id, $ids, true)
+                    && in_array($cancelledSale->id, $ids, true);
+            });
+    }
+
+    public function test_purchases_index_hides_cancelled_purchases_unless_requested(): void
+    {
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Purchases Filter Party',
+            'phone' => null,
+        ]);
+
+        $activePurchase = Purchase::query()->create([
+            'party_id' => $party->id,
+            'total' => 150,
+            'status' => Purchase::STATUS_ACTIVE,
+            'created_at' => '2026-04-04 10:00:00',
+            'updated_at' => '2026-04-04 10:00:00',
+        ]);
+
+        $cancelledPurchase = Purchase::query()->create([
+            'party_id' => $party->id,
+            'total' => 250,
+            'status' => Purchase::STATUS_CANCELLED,
+            'created_at' => '2026-04-04 12:00:00',
+            'updated_at' => '2026-04-04 12:00:00',
+        ]);
+
+        $dateBs = DateHelper::adToBs('2026-04-04');
+
+        $defaultResponse = $this->actingAs($user)->get(route('purchases.index', [
+            'from_date_bs' => $dateBs,
+            'to_date_bs' => $dateBs,
+        ]));
+
+        $defaultResponse
+            ->assertOk()
+            ->assertViewHas('purchases', function ($purchases) use ($activePurchase, $cancelledPurchase): bool {
+                $ids = $purchases->getCollection()->pluck('id')->all();
+
+                return in_array($activePurchase->id, $ids, true)
+                    && ! in_array($cancelledPurchase->id, $ids, true);
+            });
+
+        $withCancelledResponse = $this->actingAs($user)->get(route('purchases.index', [
+            'from_date_bs' => $dateBs,
+            'to_date_bs' => $dateBs,
+            'show_cancelled' => 1,
+        ]));
+
+        $withCancelledResponse
+            ->assertOk()
+            ->assertViewHas('purchases', function ($purchases) use ($activePurchase, $cancelledPurchase): bool {
+                $ids = $purchases->getCollection()->pluck('id')->all();
+
+                return in_array($activePurchase->id, $ids, true)
+                    && in_array($cancelledPurchase->id, $ids, true);
+            });
     }
 
     public function test_ledger_entries_cannot_be_updated_or_deleted(): void

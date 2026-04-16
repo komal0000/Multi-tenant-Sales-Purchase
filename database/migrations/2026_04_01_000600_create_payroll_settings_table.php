@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->decimal('leave_fine_per_day', 15, 2)->default(0);
             $table->decimal('overtime_money_per_day', 15, 2)->default(0);
+            $table->unsignedSmallInteger('payment_sidebar_limit')->default(10);
             $table->timestamps();
         });
     }

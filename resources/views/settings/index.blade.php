@@ -37,7 +37,7 @@
         <div class="grid gap-6 xl:grid-cols-2">
             <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="text-lg font-semibold text-gray-900">Payroll Settings</h2>
-                <p class="mt-1 text-sm text-gray-500">Configure leave fine and overtime money used in salary sheet calculation.</p>
+                <p class="mt-1 text-sm text-gray-500">Configure payroll rates and payment-entry sidebar behavior.</p>
 
                 <form method="POST" action="{{ route('settings.payroll.update') }}" class="mt-4 grid gap-4 sm:grid-cols-2">
                     @csrf
@@ -49,6 +49,11 @@
                     <div>
                         <label for="overtime_money_per_day" class="block text-sm font-medium text-gray-700">Overtime Money Per Day</label>
                         <input id="overtime_money_per_day" name="overtime_money_per_day" type="number" step="0.01" min="0" value="{{ old('overtime_money_per_day', $payrollSetting->overtime_money_per_day) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    </div>
+                    <div>
+                        <label for="payment_sidebar_limit" class="block text-sm font-medium text-gray-700">Payment Sidebar Rows</label>
+                        <input id="payment_sidebar_limit" name="payment_sidebar_limit" type="number" step="1" min="1" max="25" value="{{ old('payment_sidebar_limit', $payrollSetting->payment_sidebar_limit ?? 10) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <p class="mt-1 text-xs text-gray-500">Show this many recent ledger rows on the payment screen.</p>
                     </div>
                     <div class="sm:col-span-2">
                         <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Save Payroll Settings</button>

@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->decimal('qty', 15, 4)->default(0)->comment('Stored cache updated by item_ledger observer');
-            $table->decimal('rate', 15, 2);
-            $table->decimal('cost_price', 15, 2);
+            $table->decimal('rate', 15, 4);
+            $table->decimal('cost_price', 15, 4);
             $table->timestamps();
         });
     }

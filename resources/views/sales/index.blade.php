@@ -29,7 +29,11 @@
                 <label class="block text-sm font-medium text-gray-700">Keyword</label>
                 <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Bill no, amount, party" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
             </div>
-            <div class="flex items-center gap-3 md:pb-0.5">
+            <div class="flex flex-wrap items-center gap-3 md:pb-0.5">
+                <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+                    <input type="checkbox" name="show_cancelled" value="1" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" @checked($filters['show_cancelled'] ?? false)>
+                    <span>Show cancelled bills</span>
+                </label>
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>
                 <a href="{{ route('sales.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</a>
             </div>
@@ -45,6 +49,7 @@
                             <th class="px-5 py-4 text-right">Received</th>
                             <th class="px-5 py-4 text-left">AD Date</th>
                             <th class="px-5 py-4 text-left">BS Date</th>
+                            <th class="px-5 py-4 text-left">Status</th>
                             <th class="px-5 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -57,20 +62,29 @@
                                 <td class="px-5 py-4 text-gray-500">{{ $sale->created_at->format('d M Y') }}</td>
                                 <td class="px-5 py-4 text-gray-500">{{ $sale->created_at_bs }}</td>
                                 <td class="px-5 py-4">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $sale->isCancelled() ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                        {{ $sale->isCancelled() ? 'Cancelled' : 'Active' }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4">
                                     <div class="flex items-center justify-end gap-4">
                                         <a href="{{ route('sales.show', $sale) }}" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
-                                        <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="text-sm text-green-600 hover:text-green-700">Payment</a>
-                                        <form action="{{ route('sales.destroy', $sale) }}" method="POST" onsubmit="return confirm('Delete this sale? The ledger entry will remain for audit history.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-sm text-red-500 hover:text-red-700">Delete</button>
-                                        </form>
+                                        @if (! $sale->isCancelled())
+                                            <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="text-sm text-green-600 hover:text-green-700">Payment</a>
+                                            <form action="{{ route('sales.destroy', $sale) }}" method="POST" onsubmit="return confirm('Cancel this sale? This will remove its ledger and stock impact.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-sm text-red-500 hover:text-red-700">Cancel</button>
+                                            </form>
+                                        @else
+                                            <span class="text-sm text-gray-400">Locked</span>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-12 text-center text-gray-500">
+                                <td colspan="7" class="px-5 py-12 text-center text-gray-500">
                                     {{ $hasSearched ? 'No sales found.' : 'Use filters and click Search to load sales.' }}
                                 </td>
                             </tr>
@@ -92,11 +106,16 @@
                         <div class="text-right">
                             <div class="font-mono text-sm font-semibold text-indigo-700">{{ number_format($sale->total, 2) }}</div>
                             <div class="mt-1 font-mono text-xs {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">Paid {{ number_format($sale->received_amount, 2) }}</div>
+                            <div class="mt-2 text-xs font-medium {{ $sale->isCancelled() ? 'text-red-600' : 'text-emerald-600' }}">{{ $sale->isCancelled() ? 'Cancelled' : 'Active' }}</div>
                         </div>
                     </div>
                     <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
                         <a href="{{ route('sales.show', $sale) }}" class="font-medium text-indigo-600">View Bill</a>
-                        <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="font-medium text-green-600">Add Payment</a>
+                        @if (! $sale->isCancelled())
+                            <a href="{{ route('payments.create', ['party_id' => $sale->party_id, 'sale_id' => $sale->id]) }}" class="font-medium text-green-600">Add Payment</a>
+                        @else
+                            <span class="font-medium text-gray-400">Locked</span>
+                        @endif
                     </div>
                 </div>
             @empty

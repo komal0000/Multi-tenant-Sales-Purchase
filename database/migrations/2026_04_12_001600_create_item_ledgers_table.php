@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('item_id')->constrained('items');
             $table->enum('type', ['in', 'out']);
             $table->decimal('qty', 15, 4);
-            $table->decimal('rate', 15, 2);
+            $table->decimal('rate', 15, 4);
             $table->string('identifier');
             $table->unsignedBigInteger('foreign_key');
             $table->timestamp('created_at')->useCurrent();

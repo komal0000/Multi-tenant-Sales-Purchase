@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('party_id')->constrained('parties');
             $table->decimal('total', 15, 2);
+            $table->enum('status', ['active', 'cancelled'])->default('active');
             $table->timestamps();
             $table->softDeletes();
         });

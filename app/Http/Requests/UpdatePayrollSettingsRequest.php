@@ -16,6 +16,7 @@ class UpdatePayrollSettingsRequest extends FormRequest
         return [
             'leave_fine_per_day' => ['required', 'numeric', 'min:0'],
             'overtime_money_per_day' => ['required', 'numeric', 'min:0'],
+            'payment_sidebar_limit' => ['required', 'integer', 'min:1', 'max:25'],
         ];
     }
 }

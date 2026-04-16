@@ -58,9 +58,6 @@
                                     placeholder="Phone"
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                                     autocomplete="off"
-                                    inputmode="numeric"
-                                    maxlength="10"
-                                    pattern="[0-9]{10}"
                                 >
                             </td>
                             <td class="px-5 py-3">
@@ -269,12 +266,6 @@
                 openingBalanceSideSelect.value = 'dr';
             }
 
-            function normalizePhoneInput(value) {
-                return String(value ?? '')
-                    .replace(/\D+/g, '')
-                    .slice(0, 10);
-            }
-
             function buildPartyRow(party) {
                 const openingBalance = Number(party.opening_balance ?? 0);
                 const balanceSide = String(party.opening_balance_side ?? 'dr');
@@ -342,7 +333,7 @@
                 clearErrors();
 
                 const name = nameInput.value.trim();
-                const phone = normalizePhoneInput(phoneInput.value);
+                const phone = phoneInput.value.trim();
                 const address = addressInput.value.trim();
                 const openingBalance = Number(openingBalanceInput.value || 0);
                 const openingBalanceSide = openingBalanceSideSelect.value === 'cr' ? 'cr' : 'dr';
@@ -439,10 +430,6 @@
 
                     saveInlineParty();
                 });
-            });
-
-            phoneInput.addEventListener('input', () => {
-                phoneInput.value = normalizePhoneInput(phoneInput.value);
             });
         })();
     </script>

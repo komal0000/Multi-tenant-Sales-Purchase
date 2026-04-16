@@ -28,6 +28,7 @@
             ['label' => 'Employee Salary', 'route' => 'employee-salaries.index', 'active' => 'employee-salaries.*', 'icon' => 'employee-salaries', 'section' => 'main'],
             ['label' => 'Sales Report', 'route' => 'reports.sales', 'active' => 'reports.sales', 'icon' => 'sales', 'section' => 'reports'],
             ['label' => 'Purchase Report', 'route' => 'reports.purchases', 'active' => 'reports.purchases', 'icon' => 'purchases', 'section' => 'reports'],
+            ['label' => 'Stock FIFO', 'route' => 'reports.stock-ledger', 'active' => 'reports.stock-ledger', 'icon' => 'items', 'section' => 'reports'],
             ['label' => 'Cashbook', 'route' => 'reports.cashbook', 'active' => 'reports.cashbook', 'icon' => 'cashbook', 'section' => 'reports'],
             ['label' => 'Profit / Loss', 'route' => 'reports.profit-loss', 'active' => 'reports.profit-loss', 'icon' => 'profit-loss', 'section' => 'reports'],
             ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*', 'icon' => 'items', 'section' => 'settings'],
@@ -167,5 +168,4 @@
     @stack('scripts')
 </body>
 </html>
-
 
