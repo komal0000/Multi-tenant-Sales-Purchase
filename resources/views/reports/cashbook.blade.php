@@ -39,11 +39,11 @@
                 </p>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-sm text-gray-500">Period Receivable</p>
+                <p class="text-sm text-gray-500">Period Dr</p>
                 <p class="mt-2 font-mono text-xl font-semibold text-blue-600">{{ number_format($periodDebit, 2) }}</p>
             </div>
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-sm text-gray-500">Period Payable</p>
+                <p class="text-sm text-gray-500">Period Cr</p>
                 <p class="mt-2 font-mono text-xl font-semibold text-orange-500">{{ number_format($periodCredit, 2) }}</p>
             </div>
         </div>
@@ -56,8 +56,8 @@
                             <th class="px-4 py-3 text-left">Date</th>
                             <th class="px-4 py-3 text-left">Type</th>
                             <th class="px-4 py-3 text-left">Reference</th>
-                            <th class="px-4 py-3 text-right text-blue-600">Receivable</th>
-                            <th class="px-4 py-3 text-right text-orange-500">Payable</th>
+                            <th class="px-4 py-3 text-right text-blue-600">Dr</th>
+                            <th class="px-4 py-3 text-right text-orange-500">Cr</th>
                             <th class="px-4 py-3 text-right">Running Balance</th>
                         </tr>
                     </thead>

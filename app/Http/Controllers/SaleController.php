@@ -139,6 +139,8 @@ class SaleController extends Controller
         return view('sales.create', [
             'parties' => $this->partyCache->all(),
             'accounts' => $accounts,
+            'hasAccounts' => $accounts->isNotEmpty(),
+            'accountsCreateUrl' => route('accounts.create'),
             'itemsCatalog' => Item::query()->orderBy('name')->get(['id', 'name', 'qty', 'rate', 'cost_price']),
             'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,
             'currentBsDateInt' => DateHelper::currentBsInt(),

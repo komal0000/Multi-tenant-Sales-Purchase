@@ -24,6 +24,7 @@ class StorePaymentRequest extends FormRequest
 
         $this->merge([
             'cheque_number' => filled($cheque) ? trim((string) $cheque) : null,
+            'notes' => $this->filled('notes') ? trim((string) $this->input('notes')) : null,
             'type' => $this->filled('type') ? $this->input('type') : null,
             'sale_id' => $this->filled('sale_id') ? $this->input('sale_id') : null,
             'purchase_id' => $this->filled('purchase_id') ? $this->input('purchase_id') : null,
@@ -40,6 +41,7 @@ class StorePaymentRequest extends FormRequest
             'type' => ['nullable', 'in:received,given'],
             'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
             'cheque_number' => ['nullable', 'string', 'max:50'],
+            'notes' => ['nullable', 'string', 'max:255'],
             'sale_id' => ['nullable', 'integer', Rule::exists('sales', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('status', Sale::STATUS_ACTIVE))],
             'purchase_id' => ['nullable', 'integer', Rule::exists('purchases', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('status', Purchase::STATUS_ACTIVE))],
         ];

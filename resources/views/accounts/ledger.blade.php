@@ -51,8 +51,8 @@
                                 <th class="px-4 py-3 text-left">Date</th>
                                 <th class="px-4 py-3 text-left">Type</th>
                                 <th class="px-4 py-3 text-left">Reference</th>
-                                <th class="px-4 py-3 text-right text-blue-600">Receivable</th>
-                                <th class="px-4 py-3 text-right text-orange-500">Payable</th>
+                                <th class="px-4 py-3 text-right text-blue-600">Dr</th>
+                                <th class="px-4 py-3 text-right text-orange-500">Cr</th>
                                 <th class="px-4 py-3 text-right">Running Balance</th>
                             </tr>
                         </thead>
@@ -92,11 +92,11 @@
                         </div>
                         <div class="mt-3 grid grid-cols-3 gap-2 text-xs font-mono">
                             <div>
-                                <p class="text-gray-500">Receivable</p>
+                                <p class="text-gray-500">Dr</p>
                                 <p class="font-semibold text-blue-600">{{ $row->dr_amount > 0 ? number_format($row->dr_amount, 2) : '—' }}</p>
                             </div>
                             <div>
-                                <p class="text-gray-500">Payable</p>
+                                <p class="text-gray-500">Cr</p>
                                 <p class="font-semibold text-orange-500">{{ $row->cr_amount > 0 ? number_format($row->cr_amount, 2) : '—' }}</p>
                             </div>
                             <div>
@@ -112,6 +112,5 @@
         </div>
     </div>
 @endsection
-
 
 

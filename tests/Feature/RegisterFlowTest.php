@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Account;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,6 +50,13 @@ class RegisterFlowTest extends TestCase
 
         $this->assertNotNull($tenant);
         $this->assertStringStartsWith('acme-traders', (string) $tenant->code);
+        $this->assertDatabaseHas('accounts', [
+            'tenant_id' => $tenant->id,
+            'name' => 'Cash Account',
+            'type' => 'cash',
+        ]);
+
+        $this->assertSame(1, Account::query()->where('tenant_id', $tenant->id)->count());
     }
 
     public function test_registration_requires_unique_phone(): void

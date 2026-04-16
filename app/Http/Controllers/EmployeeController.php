@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreEmployeeRequest;
+use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
+use App\Models\Party;
 use App\Services\PartyCacheService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeController extends Controller
 {
@@ -26,7 +29,7 @@ class EmployeeController extends Controller
             ->join('parties', 'parties.id', '=', 'employees.party_id')
             ->with('party')
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
-                $term = '%' . trim((string) $keyword) . '%';
+                $term = '%'.trim((string) $keyword).'%';
 
                 $query->where(function ($subQuery) use ($term) {
                     $subQuery
@@ -53,30 +56,31 @@ class EmployeeController extends Controller
     {
         $this->authorize('create', Employee::class);
 
-        return view('employees.create', [
-            'parties' => $this->partyCache->unassignedForEmployees(),
-        ]);
+        return view('employees.create-direct');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreEmployeeRequest $request): RedirectResponse
     {
         $this->authorize('create', Employee::class);
 
-        $tenantId = (int) ($request->user()?->tenant_id ?? 0);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'party_id' => [
-                'required',
-                'integer',
-                Rule::exists('parties', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
-                Rule::unique('employees', 'party_id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
-            ],
-            'salary' => ['required', 'numeric', 'min:0'],
-        ]);
+        $employee = DB::transaction(function () use ($validated): Employee {
+            $party = Party::query()->create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'opening_balance' => 0,
+                'opening_balance_side' => 'dr',
+            ]);
 
-        $employee = Employee::query()->create($validated);
+            return Employee::query()->create([
+                'party_id' => $party->id,
+                'salary' => $validated['salary'],
+            ]);
+        });
 
-        $this->partyCache->refreshUnassigned();
+        $this->partyCache->refreshAll();
 
         return redirect()
             ->route('employees.show', $employee)
@@ -90,5 +94,39 @@ class EmployeeController extends Controller
         return view('employees.show', [
             'employee' => $employee->load('party'),
         ]);
+    }
+
+    public function edit(Employee $employee): View
+    {
+        $this->authorize('update', $employee);
+
+        return view('employees.edit', [
+            'employee' => $employee->load('party'),
+        ]);
+    }
+
+    public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
+    {
+        $this->authorize('update', $employee);
+
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($employee, $validated): void {
+            $employee->party()->update([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+            ]);
+
+            $employee->update([
+                'salary' => $validated['salary'],
+            ]);
+        });
+
+        $this->partyCache->refreshAll();
+
+        return redirect()
+            ->route('employees.show', $employee)
+            ->with('success', 'Employee updated successfully.');
     }
 }

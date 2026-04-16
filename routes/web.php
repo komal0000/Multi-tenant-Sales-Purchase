@@ -62,7 +62,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::get('expense-categories/tree', [ExpenseCategoryController::class, 'getCategoryTree'])
         ->name('expense-categories.tree');
 
-    Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'show']);
+    Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
 
     Route::resource('sales', SaleController::class)->only(['index', 'create', 'store', 'show']);
     Route::delete('sales/{sale}', [SaleController::class, 'destroy'])
@@ -80,14 +80,16 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         ->name('payments.search-purchases');
     Route::get('payments/party-balance', [PaymentController::class, 'partyBalance'])
         ->name('payments.party-balance');
-    Route::get('payments/mass-received', [PaymentController::class, 'createMassReceived'])
-        ->name('payments.mass-received.create');
-    Route::post('payments/mass-received', [PaymentController::class, 'storeMassReceived'])
-        ->name('payments.mass-received.store');
-    Route::get('payments/mass-given', [PaymentController::class, 'createMassGiven'])
-        ->name('payments.mass-given.create');
-    Route::post('payments/mass-given', [PaymentController::class, 'storeMassGiven'])
-        ->name('payments.mass-given.store');
+    Route::get('payments/mass', [PaymentController::class, 'createMass'])
+        ->name('payments.mass.create');
+    Route::get('payments/mass/load', [PaymentController::class, 'loadMassRows'])
+        ->name('payments.mass.load');
+    Route::post('payments/mass/rows', [PaymentController::class, 'storeMassRow'])
+        ->name('payments.mass.rows.store');
+    Route::patch('payments/mass/rows/{payment}', [PaymentController::class, 'updateMassRow'])
+        ->name('payments.mass.rows.update');
+    Route::delete('payments/mass/rows/{payment}', [PaymentController::class, 'destroyMassRow'])
+        ->name('payments.mass.rows.destroy');
 
     Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show']);
     Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])

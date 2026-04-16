@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\DateHelper;
-use App\Http\Requests\StoreMassPaymentRequest;
+use App\Http\Requests\StoreMassPaymentRowRequest;
 use App\Http\Requests\StorePaymentRequest;
 use App\Models\Account;
 use App\Models\Ledger;
@@ -79,6 +79,7 @@ class PaymentController extends Controller
                     $query->where(function ($subQuery) use ($term) {
                         $subQuery
                             ->where('cheque_number', 'like', $term)
+                            ->orWhere('notes', 'like', $term)
                             ->orWhereHas('party', fn ($partyQuery) => $partyQuery->where('name', 'like', $term))
                             ->orWhereHas('account', fn ($accountQuery) => $accountQuery->where('name', 'like', $term));
                     });
@@ -105,7 +106,7 @@ class PaymentController extends Controller
         return view('payments.index', [
             'payments' => $payments,
             'parties' => $this->partyCache->all(),
-            'accounts' => Account::query()->orderByRaw("case when type = 'cash' then 0 else 1 end")->orderBy('name')->get(),
+            'accounts' => $this->orderedAccounts(),
             'filters' => [
                 'party_id' => $filters['party_id'] ?? null,
                 'account_id' => $filters['account_id'] ?? null,
@@ -139,15 +140,14 @@ class PaymentController extends Controller
                 ? 'received'
                 : ($purchase ? 'given' : ($request->string('type')->toString() ?: 'received'))
         );
-        $accounts = Account::query()
-            ->orderByRaw("case when type = 'cash' then 0 else 1 end")
-            ->orderBy('name')
-            ->get();
+        $accounts = $this->orderedAccounts();
         $defaultCashAccountId = $accounts->firstWhere('type', 'cash')?->id;
 
         return view('payments.create', [
             'parties' => $this->partyCache->all(),
             'accounts' => $accounts,
+            'hasAccounts' => $accounts->isNotEmpty(),
+            'accountsCreateUrl' => route('accounts.create'),
             'selectedSaleOption' => $sale
                 ? [
                     'id' => $sale->id,
@@ -168,27 +168,118 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function createMassReceived(Request $request): View
+    public function createMass(Request $request): View
     {
-        return $this->renderMassPaymentCreate($request, 'received');
+        $this->authorize('create', Payment::class);
+        $this->ledger->ensureCompatibilitySchema();
+
+        $accounts = $this->orderedAccounts();
+
+        return view('payments.mass-unified', [
+            'parties' => $this->partyCache->all(),
+            'accounts' => $accounts,
+            'hasAccounts' => $accounts->isNotEmpty(),
+            'accountsCreateUrl' => route('accounts.create'),
+            'dateBs' => old('date_bs', DateHelper::getCurrentBS()),
+        ]);
     }
 
-    public function storeMassReceived(StoreMassPaymentRequest $request): RedirectResponse
+    public function loadMassRows(Request $request): JsonResponse
     {
-        return $this->storeMassPayment($request, 'received');
+        $this->authorize('viewAny', Payment::class);
+        $this->ledger->ensureCompatibilitySchema();
+
+        $validated = $request->validate([
+            'date_bs' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+        ]);
+
+        $dateAd = DateHelper::bsToAd($validated['date_bs']);
+        $payments = Payment::query()
+            ->with(['party', 'account', 'sale', 'purchase'])
+            ->whereDate('created_at', $dateAd)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'rows' => $payments->map(fn (Payment $payment) => $this->massPaymentRow($payment, $request))->values(),
+            'total_entries' => $payments->count(),
+            'total_amount' => number_format((float) $payments->sum('amount'), 2, '.', ''),
+        ]);
     }
 
-    public function createMassGiven(Request $request): View
+    public function storeMassRow(StoreMassPaymentRowRequest $request): JsonResponse
     {
-        return $this->renderMassPaymentCreate($request, 'given');
+        $this->authorize('create', Payment::class);
+        $this->ledger->ensureCompatibilitySchema();
+
+        $validated = $request->validated();
+        $paymentDateAd = DateHelper::bsToAd($validated['date_bs']);
+        $timestamp = $this->service->timestampForBsDate($paymentDateAd);
+
+        $payment = $this->service->create([
+            'party_id' => $validated['party_id'],
+            'amount' => $validated['amount'],
+            'type' => $validated['type'],
+            'account_id' => $validated['account_id'],
+            'cheque_number' => null,
+            'sale_id' => null,
+            'purchase_id' => null,
+            'notes' => $validated['notes'] ?? null,
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ]);
+
+        return response()->json([
+            'message' => 'Mass payment row saved successfully.',
+            'row' => $this->massPaymentRow($payment, $request),
+        ], 201);
     }
 
-    public function storeMassGiven(StoreMassPaymentRequest $request): RedirectResponse
+    public function updateMassRow(StoreMassPaymentRowRequest $request, Payment $payment): JsonResponse
     {
-        return $this->storeMassPayment($request, 'given');
+        $this->authorize('update', $payment);
+        $this->ledger->ensureCompatibilitySchema();
+        $this->ensureStandaloneMassPayment($payment);
+
+        $validated = $request->validated();
+        $paymentDateAd = DateHelper::bsToAd($validated['date_bs']);
+        $timestamp = $this->service->timestampForBsDate(
+            $paymentDateAd,
+            optional($payment->created_at)->format('H:i:s')
+        );
+
+        $payment = $this->service->updateStandalone($payment, [
+            'party_id' => $validated['party_id'],
+            'amount' => $validated['amount'],
+            'type' => $validated['type'],
+            'account_id' => $validated['account_id'],
+            'cheque_number' => null,
+            'notes' => $validated['notes'] ?? null,
+            'created_at' => $timestamp,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Mass payment row updated successfully.',
+            'row' => $this->massPaymentRow($payment, $request),
+        ]);
     }
 
-    public function store(StorePaymentRequest $request): RedirectResponse
+    public function destroyMassRow(Request $request, Payment $payment): JsonResponse
+    {
+        $this->authorize('delete', $payment);
+        $this->ledger->ensureCompatibilitySchema();
+        $this->ensureStandaloneMassPayment($payment);
+
+        $this->service->deleteStandalone($payment);
+
+        return response()->json([
+            'message' => 'Mass payment row deleted successfully.',
+        ]);
+    }
+
+    public function store(StorePaymentRequest $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', Payment::class);
         $this->ledger->ensureCompatibilitySchema();
@@ -200,6 +291,21 @@ class PaymentController extends Controller
             : (! empty($validated['purchase_id']) ? 'given' : ($validated['type'] ?? 'received'));
 
         $payment = $this->service->create($validated);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Payment created successfully.',
+                'payment' => [
+                    'id' => $payment->id,
+                    'party_id' => $payment->party_id,
+                    'amount' => number_format((float) $payment->amount, 2, '.', ''),
+                    'type' => $payment->type,
+                    'account_id' => $payment->account_id,
+                    'cheque_number' => $payment->cheque_number,
+                    'notes' => $payment->notes,
+                ],
+            ], 201);
+        }
 
         return redirect()
             ->route('payments.show', $payment)
@@ -224,8 +330,7 @@ class PaymentController extends Controller
         $this->authorize('delete', $payment);
         $this->ledger->ensureCompatibilitySchema();
 
-        $this->ledger->removeEntries('payments', $payment->id);
-        $payment->delete();
+        $this->service->delete($payment);
 
         return redirect()
             ->route('payments.index')
@@ -396,48 +501,12 @@ class PaymentController extends Controller
         return sprintf('#%d | %s | %s', (int) $id, $partyName ?? 'Unknown Party', number_format($total, 2));
     }
 
-    private function renderMassPaymentCreate(Request $request, string $type): View
+    private function orderedAccounts()
     {
-        $this->authorize('create', Payment::class);
-        $this->ledger->ensureCompatibilitySchema();
-
-        return view('payments.mass-create', [
-            'paymentType' => $type,
-            'pageTitle' => $type === 'received' ? 'Mass Received' : 'Mass Given',
-            'submitRoute' => $type === 'received'
-                ? route('payments.mass-received.store')
-                : route('payments.mass-given.store'),
-            'parties' => $this->partyCache->all(),
-            'accounts' => Account::query()
-                ->orderByRaw("case when type = 'cash' then 0 else 1 end")
-                ->orderBy('name')
-                ->get(),
-            'dateBs' => old('date_bs', DateHelper::getCurrentBS()),
-            'initialRows' => collect(old('rows', []))
-                ->map(fn ($row) => [
-                    'party_id' => filled($row['party_id'] ?? null) ? (string) $row['party_id'] : '',
-                    'account_id' => filled($row['account_id'] ?? null) ? (string) $row['account_id'] : '',
-                    'amount' => (float) ($row['amount'] ?? 0),
-                    'notes' => (string) ($row['notes'] ?? ''),
-                ])
-                ->filter(fn (array $row) => $row['party_id'] !== '' || $row['account_id'] !== '' || $row['amount'] > 0 || $row['notes'] !== '')
-                ->values()
-                ->all(),
-        ]);
-    }
-
-    private function storeMassPayment(StoreMassPaymentRequest $request, string $type): RedirectResponse
-    {
-        $this->authorize('create', Payment::class);
-        $this->ledger->ensureCompatibilitySchema();
-
-        $validated = $request->validated();
-        $paymentDateAd = DateHelper::bsToAd($validated['date_bs']);
-        $payments = $this->service->createBatch($validated['rows'], $type, $paymentDateAd);
-
-        return redirect()
-            ->route('payments.index')
-            ->with('success', sprintf('%d %s payments created successfully.', $payments->count(), $type));
+        return Account::query()
+            ->orderByRaw("case when type = 'cash' then 0 else 1 end")
+            ->orderBy('name')
+            ->get();
     }
 
     private function paymentSidebarLimit(): int
@@ -447,5 +516,46 @@ class PaymentController extends Controller
             'overtime_money_per_day' => 0,
             'payment_sidebar_limit' => 10,
         ])->payment_sidebar_limit ?? 10);
+    }
+
+    private function ensureStandaloneMassPayment(Payment $payment): void
+    {
+        if ($payment->sale_id || $payment->purchase_id) {
+            throw ValidationException::withMessages([
+                'payment' => 'Linked bill payments cannot be changed from mass payment.',
+            ]);
+        }
+    }
+
+    private function massPaymentRow(Payment $payment, Request $request): array
+    {
+        $payment->loadMissing(['party', 'account', 'sale', 'purchase']);
+
+        $isLinked = filled($payment->sale_id) || filled($payment->purchase_id);
+        $linkedLabel = 'Advance';
+
+        if ($payment->sale) {
+            $linkedLabel = 'Sale #'.$payment->sale->id.' / '.number_format((float) $payment->sale->total, 2);
+        } elseif ($payment->purchase) {
+            $linkedLabel = 'Purchase #'.$payment->purchase->id.' / '.number_format((float) $payment->purchase->total, 2);
+        }
+
+        return [
+            'id' => $payment->id,
+            'type' => $payment->type,
+            'party_id' => (string) $payment->party_id,
+            'party_label' => $payment->party?->name ?? 'Unknown Party',
+            'account_id' => (string) $payment->account_id,
+            'account_label' => $payment->account
+                ? sprintf('%s (%s)', $payment->account->name, ucfirst($payment->account->type))
+                : 'Unknown Account',
+            'amount' => number_format((float) $payment->amount, 2, '.', ''),
+            'notes' => (string) ($payment->notes ?? ''),
+            'date_bs' => DateHelper::adToBs($payment->created_at),
+            'is_linked' => $isLinked,
+            'linked_label' => $linkedLabel,
+            'can_edit' => ! $isLinked && (bool) ($request->user()?->can('update', $payment)),
+            'can_delete' => ! $isLinked && (bool) ($request->user()?->can('delete', $payment)),
+        ];
     }
 }

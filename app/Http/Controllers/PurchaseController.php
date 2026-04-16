@@ -140,6 +140,8 @@ class PurchaseController extends Controller
         return view('purchases.create', [
             'parties' => $this->partyCache->all(),
             'accounts' => $accounts,
+            'hasAccounts' => $accounts->isNotEmpty(),
+            'accountsCreateUrl' => route('accounts.create'),
             'itemsCatalog' => Item::query()->orderBy('name')->get(['id', 'name', 'qty', 'rate', 'cost_price']),
             'expenseCategories' => ExpenseCategory::query()->orderBy('name')->get(['id', 'name', 'parent_id']),
             'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,

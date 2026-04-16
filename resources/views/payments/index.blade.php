@@ -8,8 +8,7 @@
                 <p class="text-sm text-gray-500">Search payments first to load results quickly for large datasets.</p>
             </div>
             <div class="flex flex-col gap-2 sm:flex-row">
-                <a href="{{ route('payments.mass-received.create') }}" class="inline-flex items-center justify-center rounded-lg border border-green-300 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-100">Mass Received</a>
-                <a href="{{ route('payments.mass-given.create') }}" class="inline-flex items-center justify-center rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100">Mass Given</a>
+                <a href="{{ route('payments.mass.create') }}" class="inline-flex items-center justify-center rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100">Mass Payment</a>
                 <a href="{{ route('payments.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Payment</a>
             </div>
         </div>

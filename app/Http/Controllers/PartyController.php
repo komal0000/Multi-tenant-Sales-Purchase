@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\DateHelper;
 use App\Http\Requests\StorePartyRequest;
 use App\Http\Requests\UpdatePartyOpeningBalanceRequest;
+use App\Models\Account;
 use App\Models\Ledger;
 use App\Models\Party;
 use App\Services\LedgerService;
@@ -153,11 +154,19 @@ class PartyController extends Controller
 
         $this->ledger->attachReferenceText($ledgerRows);
 
+        $accounts = Account::query()
+            ->orderByRaw("case when type = 'cash' then 0 else 1 end")
+            ->orderBy('name')
+            ->get();
+
         return view('parties.ledger', [
             'party' => $party,
             'ledgerRows' => $ledgerRows,
             'openingBalance' => (float) $openingBalance,
             'currentBalance' => $this->ledger->partyBalance($party->id),
+            'accounts' => $accounts,
+            'hasAccounts' => $accounts->isNotEmpty(),
+            'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,
             'filters' => [
                 'from_date_bs' => $filters['from_date_bs'] ?? null,
                 'to_date_bs' => $filters['to_date_bs'] ?? null,

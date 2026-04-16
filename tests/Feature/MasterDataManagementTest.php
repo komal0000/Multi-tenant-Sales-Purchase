@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Account;
+use App\Models\Employee;
 use App\Models\ExpenseCategory;
 use App\Models\Item;
 use App\Models\ItemLedger;
+use App\Models\Party;
 use App\Models\PayrollSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -242,5 +245,84 @@ class MasterDataManagementTest extends TestCase
 
         $setting = PayrollSetting::query()->firstOrFail();
         $this->assertSame(7, (int) $setting->payment_sidebar_limit);
+    }
+
+    public function test_employee_create_and_update_manage_linked_party_details(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('employees.store'), [
+                'name' => 'Auto Party Employee',
+                'phone' => '9800000011',
+                'address' => 'Kathmandu',
+                'salary' => '25000',
+            ])
+            ->assertRedirect();
+
+        $employee = Employee::query()->with('party')->firstOrFail();
+
+        $this->assertDatabaseHas('parties', [
+            'id' => $employee->party_id,
+            'name' => 'Auto Party Employee',
+            'phone' => '9800000011',
+            'address' => 'Kathmandu',
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('employees.update', $employee), [
+                'name' => 'Updated Employee',
+                'phone' => '9800000099',
+                'address' => 'Pokhara',
+                'salary' => '30000',
+            ])
+            ->assertRedirect(route('employees.show', $employee));
+
+        $employee->refresh();
+        $employee->load('party');
+
+        $this->assertSame('Updated Employee', $employee->party?->name);
+        $this->assertSame('9800000099', $employee->party?->phone);
+        $this->assertSame('Pokhara', $employee->party?->address);
+        $this->assertEqualsWithDelta(30000, (float) $employee->salary, 0.01);
+    }
+
+    public function test_party_ledger_shows_quick_payment_modal_trigger(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Ledger Modal Party',
+            'phone' => null,
+        ]);
+
+        Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parties.ledger', $party))
+            ->assertOk()
+            ->assertSee('data-open-quick-payment-modal', false)
+            ->assertSee('Quick Payment');
+    }
+
+    public function test_sales_and_purchase_pages_show_account_notice_when_accounts_are_missing(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('sales.create'))
+            ->assertOk()
+            ->assertSee('No cash or bank account is available yet.');
+
+        $this->actingAs($user)
+            ->get(route('purchases.create'))
+            ->assertOk()
+            ->assertSee('No cash or bank account is available yet.');
     }
 }

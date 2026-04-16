@@ -8,7 +8,7 @@
                 <p class="text-sm text-gray-500">Running balance derived entirely from ledger rows.</p>
             </div>
             <div class="flex items-center gap-3 print:hidden">
-                <a href="{{ route('payments.create', ['party_id' => $party->id, 'type' => $currentBalance < 0 ? 'given' : 'received']) }}" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Quick Payment</a>
+                <button type="button" data-open-quick-payment-modal class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Quick Payment</button>
                 <button type="button" onclick="printPartyLedgerTable()" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Print Ledger</button>
                 <a href="{{ route('parties.show', $party) }}" class="text-sm text-indigo-600 hover:text-indigo-700">Back to party</a>
             </div>
@@ -52,8 +52,8 @@
                                 <th class="px-4 py-3 text-left">Date</th>
                                 <th class="px-4 py-3 text-left">Type</th>
                                 <th class="px-4 py-3 text-left">Reference</th>
-                                <th class="px-4 py-3 text-right text-blue-600">Receivable</th>
-                                <th class="px-4 py-3 text-right text-orange-500">Payable</th>
+                                <th class="px-4 py-3 text-right text-blue-600">Dr</th>
+                                <th class="px-4 py-3 text-right text-orange-500">Cr</th>
                                 <th class="px-4 py-3 text-right">Running Balance</th>
                             </tr>
                         </thead>
@@ -93,11 +93,11 @@
                         </div>
                         <div class="mt-3 grid grid-cols-3 gap-2 text-xs font-mono">
                             <div>
-                                <p class="text-gray-500">Receivable</p>
+                                <p class="text-gray-500">Dr</p>
                                 <p class="font-semibold text-blue-600">{{ $row->dr_amount > 0 ? number_format($row->dr_amount, 2) : '—' }}</p>
                             </div>
                             <div>
-                                <p class="text-gray-500">Payable</p>
+                                <p class="text-gray-500">Cr</p>
                                 <p class="font-semibold text-orange-500">{{ $row->cr_amount > 0 ? number_format($row->cr_amount, 2) : '—' }}</p>
                             </div>
                             <div>
@@ -109,6 +109,67 @@
                 @empty
                     <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No ledger rows found for this party.</div>
                 @endforelse
+            </div>
+        </div>
+
+        <div id="quick-payment-modal" class="fixed inset-0 z-[120] hidden" aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-900/50" data-quick-payment-backdrop></div>
+
+            <div class="relative mx-auto mt-10 w-[95%] max-w-xl rounded-xl border border-gray-200 bg-white shadow-xl sm:mt-16">
+                <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Quick Payment</h2>
+                    <button type="button" data-quick-payment-close class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Close</button>
+                </div>
+
+                <form id="quick-payment-form" action="{{ route('payments.store') }}" method="POST" class="space-y-4 p-5">
+                    @csrf
+                    <input type="hidden" name="party_id" value="{{ $party->id }}">
+
+                    <div id="quick-payment-errors" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+                    @unless($hasAccounts)
+                        @include('partials.account-required-notice', ['accountsCreateUrl' => route('accounts.create')])
+                    @endunless
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="quick_payment_type" class="block text-sm font-medium text-gray-700">Direction</label>
+                            <select id="quick_payment_type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                                <option value="received" @selected($currentBalance >= 0)>Received</option>
+                                <option value="given" @selected($currentBalance < 0)>Given</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quick_payment_account" class="block text-sm font-medium text-gray-700">Account</label>
+                            <select id="quick_payment_account" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                                @unless($hasAccounts)
+                                    <option value="">No account available</option>
+                                @endunless
+                                @foreach ($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected($defaultCashAccountId === $account->id)>{{ $account->name }} ({{ ucfirst($account->type) }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quick_payment_amount" class="block text-sm font-medium text-gray-700">Amount</label>
+                            <input id="quick_payment_amount" name="amount" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                        </div>
+                        <div>
+                            <label for="quick_payment_cheque" class="block text-sm font-medium text-gray-700">Cheque Number</label>
+                            <input id="quick_payment_cheque" name="cheque_number" type="text" maxlength="50" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="quick_payment_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                        <input id="quick_payment_notes" name="notes" type="text" maxlength="255" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" data-quick-payment-close class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" id="quick-payment-submit" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300" @disabled(! $hasAccounts)>Save Payment</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -166,7 +227,100 @@
                 printWindow.close();
             };
         }
+
+        (function () {
+            const modal = document.getElementById('quick-payment-modal');
+            const form = document.getElementById('quick-payment-form');
+            const errorsBox = document.getElementById('quick-payment-errors');
+            const submitButton = document.getElementById('quick-payment-submit');
+            const amountInput = document.getElementById('quick_payment_amount');
+
+            if (!modal || !form || !errorsBox || !submitButton) {
+                return;
+            }
+
+            const setOpen = (isOpen) => {
+                if (isOpen) {
+                    modal.classList.remove('hidden');
+                    modal.setAttribute('aria-hidden', 'false');
+                    document.body.classList.add('overflow-hidden');
+                    amountInput?.focus();
+                    return;
+                }
+
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overflow-hidden');
+                form.reset();
+                errorsBox.classList.add('hidden');
+                errorsBox.innerHTML = '';
+            };
+
+            const renderErrors = (payload) => {
+                const messages = Object.values(payload || {}).flat().filter(Boolean);
+                const list = document.createElement('ul');
+                list.className = 'list-disc space-y-1 pl-5';
+
+                (messages.length ? messages : ['Could not save payment.']).forEach((message) => {
+                    const item = document.createElement('li');
+                    item.textContent = String(message);
+                    list.appendChild(item);
+                });
+
+                errorsBox.replaceChildren(list);
+                errorsBox.classList.remove('hidden');
+            };
+
+            document.addEventListener('click', (event) => {
+                if (event.target.closest('[data-open-quick-payment-modal]')) {
+                    event.preventDefault();
+                    setOpen(true);
+                    return;
+                }
+
+                if (event.target.closest('[data-quick-payment-close]') || event.target.closest('[data-quick-payment-backdrop]')) {
+                    event.preventDefault();
+                    setOpen(false);
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    setOpen(false);
+                }
+            });
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                submitButton.disabled = true;
+                errorsBox.classList.add('hidden');
+                errorsBox.innerHTML = '';
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new FormData(form),
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        renderErrors(payload.errors || { request: [payload.message || 'Could not save payment.'] });
+                        return;
+                    }
+
+                    window.location.reload();
+                } catch (error) {
+                    renderErrors({ request: ['Could not save payment. Please try again.'] });
+                } finally {
+                    submitButton.disabled = false;
+                }
+            });
+        })();
     </script>
 @endpush
-
-

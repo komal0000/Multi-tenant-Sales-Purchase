@@ -5,7 +5,7 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-semibold text-gray-900 sm:text-3xl">Employees</h1>
-                <p class="text-sm text-gray-500">Manage employee master with linked party and base salary.</p>
+                <p class="text-sm text-gray-500">Manage employee party details and base salary together.</p>
             </div>
             <a href="{{ route('employees.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">New Employee</a>
         </div>
@@ -26,9 +26,10 @@
                 <table class="min-w-[760px] w-full text-sm">
                     <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-500">
                         <tr>
-                            <th class="px-4 py-3 text-left">Party</th>
+                            <th class="px-4 py-3 text-left">Name</th>
                             <th class="px-4 py-3 text-left">Phone</th>
                             <th class="px-4 py-3 text-right">Salary</th>
+                            <th class="px-4 py-3 text-left">Address</th>
                             <th class="px-4 py-3 text-right">Action</th>
                         </tr>
                     </thead>
@@ -38,13 +39,17 @@
                                 <td class="px-4 py-3 font-medium text-gray-900">{{ $employee->party?->name ?? '-' }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $employee->party?->phone ?? '-' }}</td>
                                 <td class="px-4 py-3 text-right font-mono font-semibold">{{ number_format((float) $employee->salary, 2) }}</td>
+                                <td class="px-4 py-3 text-gray-700">{{ $employee->party?->address ?? '-' }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('employees.show', $employee) }}" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
+                                    <div class="flex items-center justify-end gap-3">
+                                        <a href="{{ route('employees.show', $employee) }}" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
+                                        <a href="{{ route('employees.edit', $employee) }}" class="text-sm text-gray-700 hover:text-gray-900">Edit</a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-4 py-10 text-center text-gray-500">No employees found.</td>
+                                <td colspan="5" class="px-4 py-10 text-center text-gray-500">No employees found.</td>
                             </tr>
                         @endforelse
                     </tbody>

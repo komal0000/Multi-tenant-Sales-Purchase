@@ -78,6 +78,10 @@
         <form action="{{ route('purchases.store') }}" method="POST" class="space-y-6" @submit="validateBeforeSubmit($event)">
             @csrf
 
+            @unless($hasAccounts)
+                @include('partials.account-required-notice')
+            @endunless
+
             <div class="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
                 <div class="grid gap-4 md:grid-cols-12 md:items-end">
                     <div class="md:col-span-8">
@@ -201,7 +205,7 @@
                 <div class="grid grid-cols-12 gap-2 border-b border-gray-300 bg-gray-50 px-4 py-3">
                     <div class="col-span-6 md:col-span-4">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Payment Via</label>
-                        <select x-model="draftPayment.account_id" x-ref="paymentAccount" @keydown.enter.prevent="focus('paymentAmount')" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <select x-model="draftPayment.account_id" x-ref="paymentAccount" @keydown.enter.prevent="focus('paymentAmount')" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" @disabled(! $hasAccounts)>
                             @if (! $defaultCashAccountId)
                                 <option value="">Select account</option>
                             @endif
@@ -220,7 +224,7 @@
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-transparent">Action</label>
-                        <button type="button" @click="commitPayment" class="mt-1 w-full rounded bg-indigo-600 px-2 py-2 text-sm font-semibold text-white hover:bg-indigo-700">ADD</button>
+                        <button type="button" @click="commitPayment" class="mt-1 w-full rounded bg-indigo-600 px-2 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300" @disabled(! $hasAccounts)>ADD</button>
                     </div>
                 </div>
 

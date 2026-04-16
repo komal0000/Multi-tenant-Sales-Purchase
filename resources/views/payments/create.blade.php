@@ -8,6 +8,9 @@
 
             <form id="payment-create-form" action="{{ route('payments.store') }}" method="POST" class="mt-6 space-y-4">
                 @csrf
+                @unless($hasAccounts)
+                    @include('partials.account-required-notice')
+                @endunless
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <div class="flex items-center justify-between">
@@ -30,7 +33,10 @@
                     </div>
                     <div>
                         <label for="account_id" class="block text-sm font-medium text-gray-700">Account</label>
-                        <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-enter-flow>
+                        <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-enter-flow @disabled(! $hasAccounts)>
+                            @unless($hasAccounts)
+                                <option value="">No account available</option>
+                            @endunless
                             @foreach ($accounts as $account)
                                 <option value="{{ $account->id }}" @selected($selectedAccountId === $account->id)>{{ $account->name }} ({{ ucfirst($account->type) }})</option>
                             @endforeach
@@ -43,6 +49,10 @@
                     <div>
                         <label for="cheque_number" class="block text-sm font-medium text-gray-700">Cheque Number</label>
                         <input id="cheque_number" name="cheque_number" type="text" maxlength="50" value="{{ old('cheque_number') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional" data-enter-flow>
+                    </div>
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                        <input id="notes" name="notes" type="text" maxlength="255" value="{{ old('notes') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional" data-enter-flow>
                     </div>
                     <div>
                         <label for="sale_id" class="block text-sm font-medium text-gray-700">Linked Sale</label>
@@ -75,7 +85,7 @@
                 </div>
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <a href="{{ route('payments.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</a>
-                    <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700" data-enter-flow>Save Payment</button>
+                    <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300" data-enter-flow @disabled(! $hasAccounts)>Save Payment</button>
                 </div>
             </form>
         </div>

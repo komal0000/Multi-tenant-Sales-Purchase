@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
+use App\Models\Account;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Factory;
@@ -17,8 +18,7 @@ class RegisterController extends Controller
     public function __construct(
         private readonly Factory $auth,
         private readonly DatabaseManager $db,
-    ) {
-    }
+    ) {}
 
     public function create(): View
     {
@@ -51,6 +51,14 @@ class RegisterController extends Controller
                 'tenant_id' => $tenant->id,
             ]);
 
+            Account::query()->create([
+                'tenant_id' => $tenant->id,
+                'name' => 'Cash Account',
+                'type' => 'cash',
+                'opening_balance' => 0,
+                'opening_balance_side' => 'dr',
+            ]);
+
             return [$tenant, $user];
         });
 
@@ -76,7 +84,7 @@ class RegisterController extends Controller
         $prefix = $base !== '' ? $base : 'tenant';
 
         do {
-            $candidate = $prefix . '-' . Str::lower(Str::random(6));
+            $candidate = $prefix.'-'.Str::lower(Str::random(6));
         } while (Tenant::query()->where('code', $candidate)->exists());
 
         return $candidate;
