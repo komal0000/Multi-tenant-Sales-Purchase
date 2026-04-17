@@ -166,10 +166,10 @@ class SaleController extends Controller
             ]);
         }
 
-        $sale = $this->service->create($validated);
+        $this->service->create($validated);
 
         return redirect()
-            ->route('sales.show', $sale)
+            ->route('sales.create')
             ->with('success', 'Sale created successfully.');
     }
 

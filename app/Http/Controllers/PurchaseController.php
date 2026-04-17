@@ -168,10 +168,10 @@ class PurchaseController extends Controller
             ]);
         }
 
-        $purchase = $this->service->create($validated);
+        $this->service->create($validated);
 
         return redirect()
-            ->route('purchases.show', $purchase)
+            ->route('purchases.create')
             ->with('success', 'Purchase created successfully.');
     }
 

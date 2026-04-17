@@ -228,6 +228,92 @@ class MasterDataManagementTest extends TestCase
             ->assertSee('x-model.number="draftItem.total"', false);
     }
 
+    public function test_party_index_uses_quick_add_modal_instead_of_inline_entry_row(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('parties.index'))
+            ->assertOk()
+            ->assertSee('data-open-quick-party-entry', false)
+            ->assertSee('data-party-post-save="reload"', false)
+            ->assertDontSee('party-inline-entry-row', false);
+    }
+
+    public function test_account_ledger_uses_table_only_print_hook(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $account = Account::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Print Cash',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.ledger', $account))
+            ->assertOk()
+            ->assertSee('printAccountLedgerTable()', false)
+            ->assertSee('account-ledger-print-table', false)
+            ->assertDontSee('window.print()', false);
+    }
+
+    public function test_successful_sale_store_redirects_back_to_create_page(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Sale Redirect Party',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('sales.store'), [
+                'party_id' => $party->id,
+                'date_bs' => DateHelper::getCurrentBS(),
+                'items' => [
+                    [
+                        'line_type' => 'general',
+                        'description' => 'General sale line',
+                        'qty' => '1',
+                        'rate' => '100',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('sales.create'))
+            ->assertSessionHas('success', 'Sale created successfully.');
+    }
+
+    public function test_successful_purchase_store_redirects_back_to_create_page(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Purchase Redirect Party',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('purchases.store'), [
+                'party_id' => $party->id,
+                'date_bs' => DateHelper::getCurrentBS(),
+                'items' => [
+                    [
+                        'line_type' => 'general',
+                        'description' => 'General purchase line',
+                        'qty' => '1',
+                        'rate' => '100',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('purchases.create'))
+            ->assertSessionHas('success', 'Purchase created successfully.');
+    }
+
     public function test_admin_can_view_and_update_payment_sidebar_setting(): void
     {
         /** @var User $admin */
