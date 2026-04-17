@@ -62,12 +62,12 @@ class ReportController extends Controller
         }
 
         if ($hasSearched) {
-            $openingBase = $this->openingBalanceBase($cashAccounts, $selectedAccountId);
-
-            $openingBalance = $openingBase + ((clone $query)
-                ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
-                ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
-                ->value('balance') ?? 0);
+            $openingBalance = $fromBsInt
+                ? ((clone $query)
+                    ->where('date', '<', $fromBsInt)
+                    ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
+                    ->value('balance') ?? 0)
+                : 0;
 
             $ledgerRows = (clone $query)
                 ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))
@@ -87,6 +87,12 @@ class ReportController extends Controller
             ->keyBy('id');
 
         foreach ($ledgerRows as $row) {
+            if ($row->type === 'opening_balance' || $row->ref_table === 'accounts') {
+                $row->reference_text = 'Opening Balance';
+
+                continue;
+            }
+
             $payment = $paymentMap->get($row->ref_id);
             $row->reference_text = $payment
                 ? 'Payment / '.($payment->party?->name ?? 'Unknown Party')
@@ -693,19 +699,6 @@ class ReportController extends Controller
             ->sortByDesc('amount')
             ->values()
             ->all();
-    }
-
-    private function openingBalanceBase(Collection $cashAccounts, ?int $selectedAccountId): float
-    {
-        $accounts = $selectedAccountId
-            ? $cashAccounts->where('id', $selectedAccountId)
-            : $cashAccounts;
-
-        return (float) $accounts->sum(function (Account $account) {
-            $amount = (float) ($account->opening_balance ?? 0);
-
-            return ($account->opening_balance_side ?? 'dr') === 'cr' ? -$amount : $amount;
-        });
     }
 
     /**

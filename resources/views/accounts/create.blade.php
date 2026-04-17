@@ -28,6 +28,9 @@
                         <option value="cr" @selected(old('opening_balance_side') === 'cr')>Payable</option>
                     </select>
                 </div>
+                <div class="sm:col-span-2">
+                    @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => old('opening_balance_date_bs', \App\Helpers\DateHelper::getCurrentBS())])
+                </div>
             </div>
             <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <a href="{{ route('accounts.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</a>

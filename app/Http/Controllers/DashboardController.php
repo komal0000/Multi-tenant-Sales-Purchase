@@ -39,11 +39,7 @@ class DashboardController extends Controller
             ->pluck('balance', 'account_id');
 
         $accounts->each(function (Account $account) use ($accountLedgerBalances): void {
-            $ledgerBalance = (float) ($accountLedgerBalances[$account->id] ?? 0);
-            $opening = (float) ($account->opening_balance ?? 0);
-            $openingSigned = ($account->opening_balance_side ?? 'dr') === 'cr' ? -$opening : $opening;
-
-            $account->balance = $ledgerBalance + $openingSigned;
+            $account->balance = (float) ($accountLedgerBalances[$account->id] ?? 0);
         });
 
         return view('dashboard', [

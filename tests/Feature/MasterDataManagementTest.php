@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Employee;
 use App\Models\ExpenseCategory;
@@ -10,7 +11,9 @@ use App\Models\ItemLedger;
 use App\Models\Party;
 use App\Models\PayrollSetting;
 use App\Models\User;
+use App\Services\LedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class MasterDataManagementTest extends TestCase
@@ -308,6 +311,148 @@ class MasterDataManagementTest extends TestCase
             ->assertOk()
             ->assertSee('data-open-quick-payment-modal', false)
             ->assertSee('Quick Payment');
+    }
+
+    public function test_account_opening_balance_update_keeps_backfilled_date_when_form_date_is_omitted(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        $openingDate = 20830105;
+
+        $accountId = DB::table('accounts')->insertGetId([
+            'name' => 'Backfilled Account',
+            'type' => 'cash',
+            'opening_balance' => 100,
+            'opening_balance_side' => 'dr',
+            'opening_balance_date' => null,
+            'tenant_id' => $user->tenant_id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('ledger')->insert([
+            'party_id' => null,
+            'account_id' => $accountId,
+            'dr_amount' => 100,
+            'cr_amount' => 0,
+            'type' => 'opening_balance',
+            'ref_id' => $accountId,
+            'ref_table' => 'accounts',
+            'date' => $openingDate,
+            'tenant_id' => $user->tenant_id,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('accounts.opening-balance.update', $accountId), [
+                'opening_balance' => '250',
+                'opening_balance_side' => 'dr',
+            ])
+            ->assertRedirect(route('accounts.show', $accountId));
+
+        $this->assertSame(
+            $openingDate,
+            (int) DB::table('accounts')->where('id', $accountId)->value('opening_balance_date')
+        );
+
+        $this->assertDatabaseHas('ledger', [
+            'account_id' => $accountId,
+            'type' => 'opening_balance',
+            'ref_table' => 'accounts',
+            'date' => $openingDate,
+        ]);
+    }
+
+    public function test_cashbook_labels_account_opening_rows_as_opening_balance(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        $account = Account::query()->create([
+            'name' => 'Cashbook Opening Account',
+            'type' => 'cash',
+            'opening_balance' => 0,
+        ]);
+
+        $openingDate = DateHelper::currentBsInt();
+
+        DB::table('ledger')->insert([
+            'party_id' => null,
+            'account_id' => $account->id,
+            'dr_amount' => 75,
+            'cr_amount' => 0,
+            'type' => 'opening_balance',
+            'ref_id' => $account->id,
+            'ref_table' => 'accounts',
+            'date' => $openingDate,
+            'tenant_id' => $user->tenant_id,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reports.cashbook', [
+                'account_id' => $account->id,
+                'from_date_bs' => DateHelper::fromDateInt($openingDate),
+                'to_date_bs' => DateHelper::fromDateInt($openingDate),
+            ]))
+            ->assertOk()
+            ->assertDontSee('Accounts / '.$account->id)
+            ->assertSee(number_format(75, 2));
+    }
+
+    public function test_account_ledger_does_not_double_count_opening_balance_without_from_date_filter(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        $account = Account::query()->create([
+            'name' => 'Running Balance Cash',
+            'type' => 'cash',
+            'opening_balance' => 10000,
+            'opening_balance_side' => 'dr',
+            'opening_balance_date' => DateHelper::currentBsInt(),
+        ]);
+
+        app(LedgerService::class)->syncAccountOpeningBalance($account);
+
+        $this->actingAs($user)
+            ->get(route('accounts.ledger', $account))
+            ->assertOk()
+            ->assertViewHas('openingBalance', 0)
+            ->assertSee('Balance Before Range')
+            ->assertSee('10,000.00 Receivable')
+            ->assertDontSee('20,000.00 Receivable');
+    }
+
+    public function test_cashbook_does_not_treat_current_rows_as_opening_balance_without_from_date_filter(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        app(LedgerService::class)->ensureCompatibilitySchema();
+
+        $account = Account::query()->create([
+            'name' => 'Cashbook Balance Cash',
+            'type' => 'cash',
+            'opening_balance' => 10000,
+            'opening_balance_side' => 'dr',
+            'opening_balance_date' => DateHelper::currentBsInt(),
+        ]);
+
+        app(LedgerService::class)->syncAccountOpeningBalance($account);
+
+        $this->actingAs($user)
+            ->get(route('reports.cashbook', [
+                'account_id' => $account->id,
+            ]))
+            ->assertOk()
+            ->assertViewHas('openingBalance', 0)
+            ->assertSee('Balance Before Range')
+            ->assertSee('10,000.00')
+            ->assertDontSee('20,000.00');
     }
 
     public function test_sales_and_purchase_pages_show_account_notice_when_accounts_are_missing(): void

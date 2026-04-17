@@ -18,6 +18,11 @@ Balance = SUM(dr_amount) - SUM(cr_amount)
 ## Ledger Row Structure
 Each row affects **exactly one entity**: either a party OR an account. Never both.
 
+### Date Convention (Required)
+- Any business `date` field in ledger/business tables must store **Nepali BS date integer** in `YYYYMMDD` format.
+- UI/API can accept BS date strings like `YYYY-MM-DD`, but persistence must be integer `YYYYMMDD`.
+- Example: `2082-01-03` must be stored as `20820103`.
+
 ```php
 Ledger::create([
     'party_id'   => $partyId,   // fill ONE of these
@@ -27,6 +32,7 @@ Ledger::create([
     'type'       => 'sale',
     'ref_id'     => $sale->id,
     'ref_table'  => 'sales',
+    'date'       => 20820103,
 ]);
 ```
 

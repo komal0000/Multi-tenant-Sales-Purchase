@@ -67,26 +67,28 @@
     @endphp
 
     <div class="flex min-h-screen">
-        <aside class="hidden w-72 shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
+        <aside class="hidden w-72 shrink-0 overflow-hidden border-r border-gray-200 bg-white lg:flex lg:flex-col">
             <div class="border-b border-gray-200 px-6 py-6">
                 <a href="{{ route('dashboard') }}" class="text-2xl font-semibold text-indigo-600">LedgerApp</a>
                 <p class="mt-2 text-sm text-gray-500">Sales, purchase, and ledger control in one place.</p>
             </div>
-            @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
-            @auth
-                <div class="border-t border-gray-200 px-6 py-4">
-                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name }}</p>
-                    <p class="mt-0.5 text-xs text-gray-500">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-3">
-                        @csrf
-                        <button type="submit" class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-300 hover:text-red-600">Logout</button>
-                    </form>
-                </div>
-            @endauth
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
+                @auth
+                    <div class="border-t border-gray-200 px-6 py-4">
+                        <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name }}</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ auth()->user()->email }}</p>
+                        <form method="POST" action="{{ route('logout') }}" class="mt-3">
+                            @csrf
+                            <button type="submit" class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-300 hover:text-red-600">Logout</button>
+                        </form>
+                    </div>
+                @endauth
+            </div>
         </aside>
 
         <div class="fixed inset-0 z-40 bg-gray-900/40 lg:hidden" x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"></div>
-        <aside class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] -translate-x-full flex-col border-r border-gray-200 bg-white transition-transform duration-200 lg:hidden" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        <aside class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] -translate-x-full flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-200 lg:hidden" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-5">
                 <div>
                     <a href="{{ route('dashboard') }}" class="ledger-brand-pill">LedgerApp</a>
@@ -94,17 +96,19 @@
                 </div>
                 <button type="button" class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600" @click="sidebarOpen = false">Close</button>
             </div>
-            @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
-            @auth
-                <div class="border-t border-gray-200 px-5 py-4">
-                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name }}</p>
-                    <p class="mt-0.5 text-xs text-gray-500">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-3">
-                        @csrf
-                        <button type="submit" class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-300 hover:text-red-600">Logout</button>
-                    </form>
-                </div>
-            @endauth
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
+                @auth
+                    <div class="border-t border-gray-200 px-5 py-4">
+                        <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name }}</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ auth()->user()->email }}</p>
+                        <form method="POST" action="{{ route('logout') }}" class="mt-3">
+                            @csrf
+                            <button type="submit" class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-red-300 hover:text-red-600">Logout</button>
+                        </form>
+                    </div>
+                @endauth
+            </div>
         </aside>
 
         <div class="min-w-0 flex-1">
@@ -168,4 +172,3 @@
     @stack('scripts')
 </body>
 </html>
-

@@ -360,6 +360,10 @@ class DateHelper
 
         $date = trim($date);
 
+        if ($date === '') {
+            throw new InvalidArgumentException('Date must be in YYYY-MM-DD format.');
+        }
+
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             $normalized = self::normalizeDateString($date);
             new DateTimeImmutable($normalized);

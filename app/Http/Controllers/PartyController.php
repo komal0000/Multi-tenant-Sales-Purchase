@@ -145,10 +145,12 @@ class PartyController extends Controller
 
         $query = Ledger::query()->where('party_id', $party->id);
 
-        $openingBalance = ((clone $query)
-            ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
-            ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
-            ->value('balance') ?? 0);
+        $openingBalance = $fromBsInt
+            ? ((clone $query)
+                ->where('date', '<', $fromBsInt)
+                ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
+                ->value('balance') ?? 0)
+            : 0;
 
         $ledgerRows = (clone $query)
             ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))

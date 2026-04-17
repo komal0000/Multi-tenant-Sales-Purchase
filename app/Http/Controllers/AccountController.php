@@ -23,6 +23,7 @@ class AccountController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Account::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $filters = $request->validate([
             'keyword' => ['nullable', 'string', 'max:255'],
@@ -53,9 +54,7 @@ class AccountController extends Controller
 
         $accounts->setCollection(
             $accounts->getCollection()->map(function (Account $account) use ($ledgerBalances) {
-                $opening = (float) ($account->opening_balance ?? 0);
-                $openingSigned = ($account->opening_balance_side ?? 'dr') === 'cr' ? -$opening : $opening;
-                $account->balance = (float) ($ledgerBalances[$account->id] ?? 0) + $openingSigned;
+                $account->balance = (float) ($ledgerBalances[$account->id] ?? 0);
 
                 return $account;
             })
@@ -79,18 +78,25 @@ class AccountController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Account::class);
+        $this->ledger->ensureCompatibilitySchema();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:cash,bank'],
             'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'opening_balance_side' => ['nullable', 'in:dr,cr'],
+            'opening_balance_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
 
         $validated['opening_balance'] = (float) ($validated['opening_balance'] ?? 0);
         $validated['opening_balance_side'] = $validated['opening_balance_side'] ?? 'dr';
+        $validated['opening_balance_date'] = filled($validated['opening_balance_date_bs'] ?? null)
+            ? DateHelper::toDateInt((string) $validated['opening_balance_date_bs'])
+            : DateHelper::currentBsInt();
+        unset($validated['opening_balance_date_bs']);
 
         $account = Account::query()->create($validated);
+        $this->ledger->syncAccountOpeningBalance($account);
 
         return redirect()
             ->route('accounts.show', $account)
@@ -100,6 +106,8 @@ class AccountController extends Controller
     public function show(Account $account): View
     {
         $this->authorize('view', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
 
         return view('accounts.show', [
             'account' => $account->loadCount('payments'),
@@ -111,6 +119,8 @@ class AccountController extends Controller
     public function ledgerStatement(Request $request, Account $account): View
     {
         $this->authorize('view', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
 
         $filters = $request->validate([
             'from_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
@@ -128,12 +138,12 @@ class AccountController extends Controller
 
         $query = Ledger::query()->where('account_id', $account->id);
 
-        $openingBase = $this->openingSigned((float) ($account->opening_balance ?? 0), $account->opening_balance_side ?? 'dr');
-
-        $openingBalance = $openingBase + ((clone $query)
-            ->when($fromBsInt, fn ($builder) => $builder->where('date', '<', $fromBsInt))
-            ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
-            ->value('balance') ?? 0);
+        $openingBalance = $fromBsInt
+            ? ((clone $query)
+                ->where('date', '<', $fromBsInt)
+                ->selectRaw('COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')
+                ->value('balance') ?? 0)
+            : 0;
 
         $ledgerRows = (clone $query)
             ->when($fromBsInt, fn ($builder) => $builder->where('date', '>=', $fromBsInt))
@@ -158,16 +168,23 @@ class AccountController extends Controller
     public function updateOpeningBalance(Request $request, Account $account): RedirectResponse
     {
         $this->authorize('update', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
 
         $validated = $request->validate([
             'opening_balance' => ['required', 'numeric', 'min:0'],
             'opening_balance_side' => ['required', 'in:dr,cr'],
+            'opening_balance_date_bs' => ['nullable', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
 
         $account->update([
             'opening_balance' => (float) $validated['opening_balance'],
             'opening_balance_side' => $validated['opening_balance_side'],
+            'opening_balance_date' => filled($validated['opening_balance_date_bs'] ?? null)
+                ? DateHelper::toDateInt((string) $validated['opening_balance_date_bs'])
+                : (int) ($account->opening_balance_date ?? DateHelper::currentBsInt()),
         ]);
+        $this->ledger->syncAccountOpeningBalance($account);
 
         return redirect()
             ->route('accounts.show', $account)
@@ -195,6 +212,12 @@ class AccountController extends Controller
             ->keyBy('id');
 
         foreach ($ledgerRows as $row) {
+            if ($row->type === 'opening_balance' || $row->ref_table === 'accounts') {
+                $row->reference_text = 'Opening Balance';
+
+                continue;
+            }
+
             if ($row->ref_table === 'sales') {
                 $sale = $saleMap->get($row->ref_id);
                 $row->reference_text = $sale

@@ -1,54 +1,56 @@
-<div id="quick-party-entry-modal" class="fixed inset-0 z-[120] hidden" aria-hidden="true">
+<div id="quick-party-entry-modal" class="fixed inset-0 z-[120] hidden overflow-y-auto" aria-hidden="true">
     <div class="absolute inset-0 bg-gray-900/50" data-quick-party-backdrop></div>
 
-    <div class="relative mx-auto mt-10 w-[95%] max-w-xl rounded-xl border border-gray-200 bg-white shadow-xl sm:mt-16">
-        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-            <h2 class="text-lg font-semibold text-gray-900">Quick Party Entry</h2>
-            <button type="button" data-quick-party-close class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Close</button>
+    <div class="relative flex min-h-full items-center justify-center px-4 py-4 sm:px-6 sm:py-8">
+        <div class="w-full max-w-xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)]">
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <h2 class="text-lg font-semibold text-gray-900">Quick Party Entry</h2>
+                <button type="button" data-quick-party-close class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Close</button>
+            </div>
+
+            <form id="quick-party-entry-form" action="{{ route('parties.store') }}" method="POST" class="space-y-4 overflow-y-auto p-5">
+                @csrf
+
+                <div id="quick-party-errors" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+                <div>
+                    <label for="quick_party_name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input id="quick_party_name" name="name" type="text" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                </div>
+
+                <div>
+                    <label for="quick_party_phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                    <input id="quick_party_phone" name="phone" type="tel" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
+                </div>
+
+                <div>
+                    <label for="quick_party_address" class="block text-sm font-medium text-gray-700">Address</label>
+                    <input id="quick_party_address" name="address" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label for="quick_party_opening_balance" class="block text-sm font-medium text-gray-700">Opening Balance</label>
+                        <input id="quick_party_opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    </div>
+                    <div>
+                        @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => \App\Helpers\DateHelper::getCurrentBS()])
+                    </div>
+                    <div>
+                        <label for="quick_party_opening_balance_side" class="block text-sm font-medium text-gray-700">Balance Type</label>
+                        <select id="quick_party_opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                            <option value="dr" selected>Receivable</option>
+                            <option value="cr">Payable</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button type="button" data-quick-party-close class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" id="quick-party-submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Save Party</button>
+                </div>
+            </form>
         </div>
-
-        <form id="quick-party-entry-form" action="{{ route('parties.store') }}" method="POST" class="space-y-4 p-5">
-            @csrf
-
-            <div id="quick-party-errors" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
-
-            <div>
-                <label for="quick_party_name" class="block text-sm font-medium text-gray-700">Name</label>
-                <input id="quick_party_name" name="name" type="text" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-            </div>
-
-            <div>
-                <label for="quick_party_phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                <input id="quick_party_phone" name="phone" type="tel" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
-            </div>
-
-            <div>
-                <label for="quick_party_address" class="block text-sm font-medium text-gray-700">Address</label>
-                <input id="quick_party_address" name="address" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-                <div>
-                    <label for="quick_party_opening_balance" class="block text-sm font-medium text-gray-700">Opening Balance</label>
-                    <input id="quick_party_opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-                </div>
-                <div>
-                    @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => \App\Helpers\DateHelper::getCurrentBS()])
-                </div>
-                <div>
-                    <label for="quick_party_opening_balance_side" class="block text-sm font-medium text-gray-700">Balance Type</label>
-                    <select id="quick_party_opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-                        <option value="dr" selected>Receivable</option>
-                        <option value="cr">Payable</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button type="button" data-quick-party-close class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" id="quick-party-submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Save Party</button>
-            </div>
-        </form>
     </div>
 </div>
 

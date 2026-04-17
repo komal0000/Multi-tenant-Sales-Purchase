@@ -29,7 +29,7 @@
         </form>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p class="text-sm text-gray-500">Opening Balance</p>
+            <p class="text-sm text-gray-500">Balance Before Range</p>
             <p class="mt-2 font-mono text-xl font-semibold {{ $openingBalance >= 0 ? 'text-green-600' : 'text-red-500' }}">
                 {{ number_format(abs($openingBalance), 2) }} {{ $openingBalance >= 0 ? 'Receivable' : 'Payable' }}
             </p>
@@ -112,4 +112,3 @@
         </div>
     </div>
 @endsection
-

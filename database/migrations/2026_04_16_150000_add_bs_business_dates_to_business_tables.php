@@ -68,13 +68,11 @@ return new class extends Migration
             ->orderBy('id')
             ->chunkById(200, function ($rows) use ($table): void {
                 foreach ($rows as $row) {
-                    $createdAt = $row->created_at ? (string) $row->created_at : now()->toDateString();
-
                     DB::table($table)
                         ->where('id', $row->id)
                         ->whereNull('date')
                         ->update([
-                            'date' => DateHelper::adToBsInt($createdAt),
+                            'date' => $this->resolveBsDateInt($row->created_at ?? null),
                         ]);
                 }
             });
@@ -95,7 +93,7 @@ return new class extends Migration
 
                     $resolved = $openingDate
                         ? (int) $openingDate
-                        : DateHelper::adToBsInt($row->created_at ? (string) $row->created_at : now()->toDateString());
+                        : $this->resolveBsDateInt($row->created_at ?? null);
 
                     DB::table('parties')
                         ->where('id', $row->id)
@@ -113,8 +111,14 @@ return new class extends Migration
             return;
         }
 
-        Schema::table($tableName, function (Blueprint $table) use ($columnName, $after): void {
-            $table->unsignedInteger($columnName)->nullable()->after($after);
+        $hasAfterColumn = Schema::hasColumn($tableName, $after);
+
+        Schema::table($tableName, function (Blueprint $table) use ($columnName, $after, $hasAfterColumn): void {
+            $column = $table->unsignedInteger($columnName)->nullable();
+
+            if ($hasAfterColumn) {
+                $column->after($after);
+            }
         });
     }
 
@@ -153,6 +157,17 @@ return new class extends Migration
 
     private function indexExists(string $tableName, string $indexName): bool
     {
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $record = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$tableName, $indexName]
+            );
+
+            return $record !== null;
+        }
+
         $database = DB::getDatabaseName();
 
         return DB::table('information_schema.statistics')
@@ -160,5 +175,18 @@ return new class extends Migration
             ->where('table_name', $tableName)
             ->where('index_name', $indexName)
             ->exists();
+    }
+
+    private function resolveBsDateInt(mixed $sourceDate): int
+    {
+        if ($sourceDate instanceof DateTimeInterface) {
+            return DateHelper::adToBsInt($sourceDate);
+        }
+
+        if (is_string($sourceDate) && trim($sourceDate) !== '') {
+            return DateHelper::adToBsInt($sourceDate);
+        }
+
+        return DateHelper::adToBsInt(now());
     }
 };
