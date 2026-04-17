@@ -11,7 +11,7 @@
             <div class="sales-purchase-report-filter-grid">
                 <div>
                     <label for="stock-ledger-item-filter" class="block text-sm font-medium text-gray-700">Item</label>
-                    <select id="stock-ledger-item-filter" name="item_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <select id="stock-ledger-item-filter" name="item_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         <option value="">All items</option>
                         @foreach ($items as $item)
                             <option value="{{ $item->id }}" @selected((string) ($filters['item_id'] ?? '') === (string) $item->id)>{{ $item->name }}</option>

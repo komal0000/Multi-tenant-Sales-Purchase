@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <title>{{ $title ?? 'Sales, Purchase & Ledger System' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>
@@ -10,6 +10,9 @@
     </script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="{{ asset('css/layout.css') }}" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{{ asset('js/layout.js') }}" defer></script>
@@ -67,12 +70,12 @@
     @endphp
 
     <div class="flex min-h-screen">
-        <aside class="hidden w-72 shrink-0 overflow-hidden border-r border-gray-200 bg-white lg:flex lg:flex-col">
+        <aside class="hidden w-72 shrink-0 overflow-hidden border-r border-gray-200 bg-white lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen">
             <div class="border-b border-gray-200 px-6 py-6">
                 <a href="{{ route('dashboard') }}" class="text-2xl font-semibold text-indigo-600">LedgerApp</a>
                 <p class="mt-2 text-sm text-gray-500">Sales, purchase, and ledger control in one place.</p>
             </div>
-            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
                 @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
                 @auth
                     <div class="border-t border-gray-200 px-6 py-4">
@@ -89,14 +92,18 @@
 
         <div class="fixed inset-0 z-40 bg-gray-900/40 lg:hidden" x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"></div>
         <aside class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] -translate-x-full flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-200 lg:hidden" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-5">
+            <div class="flex items-start justify-between border-b border-gray-200 px-5 py-5">
                 <div>
                     <a href="{{ route('dashboard') }}" class="ledger-brand-pill">LedgerApp</a>
                     <p class="mt-2 text-sm text-gray-500">Sales, purchase, and ledger control.</p>
                 </div>
-                <button type="button" class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600" @click="sidebarOpen = false">Close</button>
+                <button type="button" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100" @click="sidebarOpen = false" aria-label="Close menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
                 @include('partials.navigation-links', ['items' => $navigationItems, 'variant' => 'vertical'])
                 @auth
                     <div class="border-t border-gray-200 px-5 py-4">

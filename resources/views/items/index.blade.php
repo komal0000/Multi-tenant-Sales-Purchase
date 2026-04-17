@@ -15,19 +15,19 @@
                 @csrf
                 <div class="md:col-span-4">
                     <label for="name" class="block text-xs font-medium text-gray-600">Item Name</label>
-                    <input id="name" name="name" type="text" value="{{ old('name') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <input id="name" name="name" type="text" value="{{ old('name') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                 </div>
                 <div class="md:col-span-2">
                     <label for="qty" class="block text-xs font-medium text-gray-600">Opening Qty</label>
-                    <input id="qty" name="qty" type="number" min="0" step="0.0001" value="{{ old('qty', '0') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
+                    <input id="qty" name="qty" type="number" min="0" step="0.0001" value="{{ old('qty', '0') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right">
                 </div>
                 <div class="md:col-span-2">
                     <label for="rate" class="block text-xs font-medium text-gray-600">Sale Rate</label>
-                    <input id="rate" name="rate" type="number" min="0" step="0.0001" value="{{ old('rate') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
+                    <input id="rate" name="rate" type="number" min="0" step="0.0001" value="{{ old('rate') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right">
                 </div>
                 <div class="md:col-span-2">
                     <label for="cost_price" class="block text-xs font-medium text-gray-600">Cost Price</label>
-                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.0001" value="{{ old('cost_price') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right">
+                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.0001" value="{{ old('cost_price') }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-right">
                 </div>
                 <div class="md:col-span-2 md:flex md:items-end">
                     <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Save Item</button>
@@ -38,7 +38,7 @@
         <form method="GET" action="{{ route('items.index') }}" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Search Items</label>
-                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Item name" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Item name" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
             <div class="flex items-center gap-3 md:pb-0.5">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>

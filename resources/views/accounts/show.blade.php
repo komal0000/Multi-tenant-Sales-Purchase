@@ -27,11 +27,11 @@
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <div>
                         <label for="opening_balance" class="block text-xs font-medium text-gray-600">Amount</label>
-                        <input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="{{ old('opening_balance', $account->opening_balance ?? 0) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="{{ old('opening_balance', $account->opening_balance ?? 0) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="opening_balance_side" class="block text-xs font-medium text-gray-600">Balance Type</label>
-                        <select id="opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <select id="opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                             <option value="dr" @selected(old('opening_balance_side', $account->opening_balance_side ?? 'dr') === 'dr')>Receivable</option>
                             <option value="cr" @selected(old('opening_balance_side', $account->opening_balance_side ?? 'dr') === 'cr')>Payable</option>
                         </select>

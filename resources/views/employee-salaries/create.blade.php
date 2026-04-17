@@ -14,7 +14,7 @@
             <form method="GET" action="{{ route('employee-salaries.create') }}" class="mt-5 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                 <div>
                     <label for="salary_month_bs" class="block text-sm font-medium text-gray-700">Salary Month (BS)</label>
-                    <input id="salary_month_bs" name="salary_month_bs" type="text" value="{{ old('salary_month_bs', $salaryMonthBs) }}" placeholder="YYYY-MM" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <input id="salary_month_bs" name="salary_month_bs" type="text" value="{{ old('salary_month_bs', $salaryMonthBs) }}" placeholder="YYYY-MM" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                 </div>
                 <div class="flex items-center gap-3 md:pb-0.5">
                     <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Load Sheet</button>
@@ -40,7 +40,7 @@
                 </div>
                 <div>
                     <label for="account_id" class="block text-sm font-medium text-gray-700">Expense Account</label>
-                    <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         <option value="">Select account</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}" @selected((string) old('account_id', $selectedAccountId) === (string) $account->id)>
@@ -99,7 +99,7 @@
                                             step="0.5"
                                             name="leaves[{{ $employee->id }}]"
                                             value="{{ $leaveValue }}"
-                                            class="salary-leave-input w-24 rounded-lg border border-gray-300 px-2 py-1 text-right"
+                                            class="salary-leave-input w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm"
                                         >
                                     </td>
                                     <td class="px-4 py-3 text-right">
@@ -109,7 +109,7 @@
                                             step="0.5"
                                             name="overtimes[{{ $employee->id }}]"
                                             value="{{ $overtimeValue }}"
-                                            class="salary-overtime-input w-24 rounded-lg border border-gray-300 px-2 py-1 text-right"
+                                            class="salary-overtime-input w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm"
                                         >
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-red-600 salary-deduction">{{ number_format((float) $row['deduction'], 2) }}</td>

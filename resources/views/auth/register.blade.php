@@ -45,7 +45,7 @@
                                 value="{{ old('business_name') }}"
                                 required
                                 autofocus
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="Your business or organization name"
                             >
                         </div>
@@ -58,7 +58,7 @@
                                 name="name"
                                 value="{{ old('name') }}"
                                 required
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="Owner or administrator name"
                             >
                         </div>
@@ -77,7 +77,7 @@
                                 minlength="10"
                                 maxlength="10"
                                 oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="98XXXXXXXX"
                             >
                         </div>
@@ -90,7 +90,7 @@
                                 name="email"
                                 value="{{ old('email') }}"
                                 autocomplete="email"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="owner@company.com"
                             >
                         </div>
@@ -103,7 +103,7 @@
                                 name="password"
                                 required
                                 autocomplete="new-password"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="Minimum 8 characters"
                             >
                         </div>
@@ -116,7 +116,7 @@
                                 name="password_confirmation"
                                 required
                                 autocomplete="new-password"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                                 placeholder="Re-enter your password"
                             >
                         </div>

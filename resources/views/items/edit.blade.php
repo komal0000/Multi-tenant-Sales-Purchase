@@ -11,21 +11,21 @@
 
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Item Name</label>
-                <input id="name" name="name" type="text" value="{{ old('name', $item->name) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input id="name" name="name" type="text" value="{{ old('name', $item->name) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
 
             <div class="grid gap-3 sm:grid-cols-3">
                 <div>
                     <label for="qty" class="block text-sm font-medium text-gray-700">Opening Qty</label>
-                    <input id="qty" name="qty" type="number" min="0" step="0.0001" value="{{ old('qty', $openingQty) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right">
+                    <input id="qty" name="qty" type="number" min="0" step="0.0001" value="{{ old('qty', $openingQty) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-right text-sm">
                 </div>
                 <div>
                     <label for="rate" class="block text-sm font-medium text-gray-700">Sale Rate</label>
-                    <input id="rate" name="rate" type="number" min="0" step="0.0001" value="{{ old('rate', (float) $item->rate) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right">
+                    <input id="rate" name="rate" type="number" min="0" step="0.0001" value="{{ old('rate', (float) $item->rate) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-right text-sm">
                 </div>
                 <div>
                     <label for="cost_price" class="block text-sm font-medium text-gray-700">Cost Price</label>
-                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.0001" value="{{ old('cost_price', (float) $item->cost_price) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right">
+                    <input id="cost_price" name="cost_price" type="number" min="0" step="0.0001" value="{{ old('cost_price', (float) $item->cost_price) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-right text-sm">
                 </div>
             </div>
 

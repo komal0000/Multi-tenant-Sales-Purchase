@@ -16,7 +16,7 @@
                     <label for="purchases-filter-party-select" class="block text-sm font-medium text-gray-700">Party</label>
                     <button type="button" data-open-quick-party-entry data-party-select-id="purchases-filter-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>
                 </div>
-                <select id="purchases-filter-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select id="purchases-filter-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">All parties</option>
                     @foreach ($parties as $party)
                         <option value="{{ $party->id }}" @selected(($filters['party_id'] ?? null) === $party->id)>{{ $party->name }}</option>
@@ -27,7 +27,7 @@
             @include('partials.bs-date-selector', ['name' => 'to_date_bs', 'label' => 'To BS Date', 'value' => $filters['to_date_bs'] ?? null])
             <div>
                 <label class="block text-sm font-medium text-gray-700">Keyword</label>
-                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Bill no, amount, party" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Bill no, amount, party" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
             <div class="flex flex-wrap items-center gap-3 md:pb-0.5">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-600">

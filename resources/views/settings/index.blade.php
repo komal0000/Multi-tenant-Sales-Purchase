@@ -44,15 +44,15 @@
                     @method('PATCH')
                     <div>
                         <label for="leave_fine_per_day" class="block text-sm font-medium text-gray-700">Leave Fine Per Day</label>
-                        <input id="leave_fine_per_day" name="leave_fine_per_day" type="number" step="0.01" min="0" value="{{ old('leave_fine_per_day', $payrollSetting->leave_fine_per_day) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="leave_fine_per_day" name="leave_fine_per_day" type="number" step="0.01" min="0" value="{{ old('leave_fine_per_day', $payrollSetting->leave_fine_per_day) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="overtime_money_per_day" class="block text-sm font-medium text-gray-700">Overtime Money Per Day</label>
-                        <input id="overtime_money_per_day" name="overtime_money_per_day" type="number" step="0.01" min="0" value="{{ old('overtime_money_per_day', $payrollSetting->overtime_money_per_day) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="overtime_money_per_day" name="overtime_money_per_day" type="number" step="0.01" min="0" value="{{ old('overtime_money_per_day', $payrollSetting->overtime_money_per_day) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="payment_sidebar_limit" class="block text-sm font-medium text-gray-700">Payment Sidebar Rows</label>
-                        <input id="payment_sidebar_limit" name="payment_sidebar_limit" type="number" step="1" min="1" max="25" value="{{ old('payment_sidebar_limit', $payrollSetting->payment_sidebar_limit ?? 10) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="payment_sidebar_limit" name="payment_sidebar_limit" type="number" step="1" min="1" max="25" value="{{ old('payment_sidebar_limit', $payrollSetting->payment_sidebar_limit ?? 10) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         <p class="mt-1 text-xs text-gray-500">Show this many recent ledger rows on the payment screen.</p>
                     </div>
                     <div class="sm:col-span-2">
@@ -69,19 +69,19 @@
                     @csrf
                     <div>
                         <label for="normal_user_name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input id="normal_user_name" name="name" type="text" value="{{ old('name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="normal_user_name" name="name" type="text" value="{{ old('name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="normal_user_phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input id="normal_user_phone" name="phone" type="text" value="{{ old('phone') }}" maxlength="10" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="normal_user_phone" name="phone" type="text" value="{{ old('phone') }}" maxlength="10" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="normal_user_email" class="block text-sm font-medium text-gray-700">Email (optional)</label>
-                        <input id="normal_user_email" name="email" type="email" value="{{ old('email') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="normal_user_email" name="email" type="email" value="{{ old('email') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div>
                         <label for="normal_user_password" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input id="normal_user_password" name="password" type="password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                        <input id="normal_user_password" name="password" type="password" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     </div>
                     <div class="sm:col-span-2">
                         <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Create Normal User</button>
@@ -99,7 +99,7 @@
             <form method="GET" action="{{ route('settings.index') }}" class="mb-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Search Users</label>
-                    <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Name, phone or email" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Name, phone or email" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                 </div>
                 <div class="flex items-center gap-3 md:pb-0.5">
                     <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>
@@ -170,22 +170,22 @@
 
                         <div>
                             <label for="edit_name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                            <input id="edit_name" name="edit_name" type="text" value="{{ old('edit_name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                            <input id="edit_name" name="edit_name" type="text" value="{{ old('edit_name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         </div>
 
                         <div>
                             <label for="edit_phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                            <input id="edit_phone" name="edit_phone" type="text" maxlength="10" value="{{ old('edit_phone') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                            <input id="edit_phone" name="edit_phone" type="text" maxlength="10" value="{{ old('edit_phone') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         </div>
 
                         <div>
                             <label for="edit_email" class="block text-sm font-medium text-gray-700">Email (optional)</label>
-                            <input id="edit_email" name="edit_email" type="email" value="{{ old('edit_email') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                            <input id="edit_email" name="edit_email" type="email" value="{{ old('edit_email') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         </div>
 
                         <div>
                             <label for="edit_password" class="block text-sm font-medium text-gray-700">New Password</label>
-                            <input id="edit_password" name="edit_password" type="password" placeholder="Leave blank" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                            <input id="edit_password" name="edit_password" type="password" placeholder="Leave blank" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         </div>
 
                         <div class="sm:col-span-2 flex items-center justify-end gap-2">

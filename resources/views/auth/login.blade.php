@@ -57,7 +57,7 @@
                                 minlength="10"
                                 maxlength="10"
                                 oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                                 placeholder="98XXXXXXXX"
                             >
                         </div>
@@ -70,7 +70,7 @@
                                 name="password"
                                 required
                                 autocomplete="current-password"
-                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                                 placeholder="Enter your password"
                             >
                         </div>

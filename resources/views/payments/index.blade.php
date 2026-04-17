@@ -19,7 +19,7 @@
                     <label for="payments-filter-party-select" class="block text-sm font-medium text-gray-700">Party</label>
                     <button type="button" data-open-quick-party-entry data-party-select-id="payments-filter-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>
                 </div>
-                <select id="payments-filter-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select id="payments-filter-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">All parties</option>
                     @foreach ($parties as $party)
                         <option value="{{ $party->id }}" @selected(($filters['party_id'] ?? null) === $party->id)>{{ $party->name }}</option>
@@ -28,7 +28,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Account</label>
-                <select name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">All accounts</option>
                     @foreach ($accounts as $account)
                         <option value="{{ $account->id }}" @selected(($filters['account_id'] ?? null) === $account->id)>{{ $account->name }}</option>
@@ -37,7 +37,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Type</label>
-                <select name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">All</option>
                     <option value="received" @selected(($filters['type'] ?? null) === 'received')>Received</option>
                     <option value="given" @selected(($filters['type'] ?? null) === 'given')>Given</option>
@@ -47,7 +47,7 @@
             @include('partials.bs-date-selector', ['name' => 'to_date_bs', 'label' => 'To BS Date', 'value' => $filters['to_date_bs'] ?? null])
             <div>
                 <label class="block text-sm font-medium text-gray-700">Keyword</label>
-                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Cheque / party / account" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Cheque / party / account" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
             <div class="md:col-span-6 flex items-center gap-3">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>

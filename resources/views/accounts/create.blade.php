@@ -7,11 +7,11 @@
             @csrf
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                <input id="name" name="name" type="text" value="{{ old('name') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm">
             </div>
             <div>
                 <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-                <select id="type" name="type" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                <select id="type" name="type" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm">
                     <option value="cash" @selected(old('type') === 'cash')>Cash</option>
                     <option value="bank" @selected(old('type') === 'bank')>Bank</option>
                 </select>
@@ -19,11 +19,11 @@
             <div class="grid gap-3 sm:grid-cols-2">
                 <div>
                     <label for="opening_balance" class="block text-sm font-medium text-gray-700">Opening Balance</label>
-                    <input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="{{ old('opening_balance', '0') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    <input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="{{ old('opening_balance', '0') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm">
                 </div>
                 <div>
                     <label for="opening_balance_side" class="block text-sm font-medium text-gray-700">Balance Type</label>
-                    <select id="opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    <select id="opening_balance_side" name="opening_balance_side" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm">
                         <option value="dr" @selected(old('opening_balance_side', 'dr') === 'dr')>Receivable</option>
                         <option value="cr" @selected(old('opening_balance_side') === 'cr')>Payable</option>
                     </select>

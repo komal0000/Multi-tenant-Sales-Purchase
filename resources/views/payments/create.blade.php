@@ -20,7 +20,7 @@
                             <label for="payment-party-select" class="block text-sm font-medium text-gray-700">Party</label>
                             <button type="button" data-open-quick-party-entry data-party-select-id="payment-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>
                         </div>
-                        <select id="payment-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-enter-flow>
+                        <select id="payment-party-select" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" data-enter-flow>
                             <option value="">Select a party</option>
                             @foreach ($parties as $party)
                                 <option value="{{ $party->id }}" @selected($selectedPartyId === $party->id)>{{ $party->name }}</option>
@@ -29,14 +29,14 @@
                     </div>
                     <div>
                         <label for="type" class="block text-sm font-medium text-gray-700">Payment Direction</label>
-                        <select id="type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-enter-flow>
+                        <select id="type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" data-enter-flow>
                             <option value="received" @selected($selectedType === 'received')>Received</option>
                             <option value="given" @selected($selectedType === 'given')>Given</option>
                         </select>
                     </div>
                     <div>
                         <label for="account_id" class="block text-sm font-medium text-gray-700">Account</label>
-                        <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-enter-flow @disabled(! $hasAccounts)>
+                        <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" data-enter-flow @disabled(! $hasAccounts)>
                             @unless($hasAccounts)
                                 <option value="">No account available</option>
                             @endunless
@@ -47,19 +47,19 @@
                     </div>
                     <div>
                         <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
-                        <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" data-enter-flow>
+                        <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm" data-enter-flow>
                     </div>
                     <div>
                         <label for="cheque_number" class="block text-sm font-medium text-gray-700">Cheque Number</label>
-                        <input id="cheque_number" name="cheque_number" type="text" maxlength="50" value="{{ old('cheque_number') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional" data-enter-flow>
+                        <input id="cheque_number" name="cheque_number" type="text" maxlength="50" value="{{ old('cheque_number') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm" placeholder="Optional" data-enter-flow>
                     </div>
                     <div>
                         <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
-                        <input id="notes" name="notes" type="text" maxlength="255" value="{{ old('notes') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional" data-enter-flow>
+                        <input id="notes" name="notes" type="text" maxlength="255" value="{{ old('notes') }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm" placeholder="Optional" data-enter-flow>
                     </div>
                     <div>
                         <label for="sale_id" class="block text-sm font-medium text-gray-700">Linked Sale</label>
-                        <select id="sale_id" name="sale_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-placeholder="Search linked sale" data-enter-flow>
+                        <select id="sale_id" name="sale_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" data-placeholder="Search linked sale" data-enter-flow>
                             <option value="">None</option>
                             @if ($selectedSaleOption)
                                 <option value="{{ $selectedSaleOption['id'] }}" @selected((string) $selectedSaleId === (string) $selectedSaleOption['id'])>{{ $selectedSaleOption['text'] }}</option>
@@ -68,7 +68,7 @@
                     </div>
                     <div>
                         <label for="purchase_id" class="block text-sm font-medium text-gray-700">Linked Purchase</label>
-                        <select id="purchase_id" name="purchase_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" data-placeholder="Search linked purchase" data-enter-flow>
+                        <select id="purchase_id" name="purchase_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" data-placeholder="Search linked purchase" data-enter-flow>
                             <option value="">None</option>
                             @if ($selectedPurchaseOption)
                                 <option value="{{ $selectedPurchaseOption['id'] }}" @selected((string) $selectedPurchaseId === (string) $selectedPurchaseOption['id'])>{{ $selectedPurchaseOption['text'] }}</option>

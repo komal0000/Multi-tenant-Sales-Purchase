@@ -13,7 +13,7 @@
         <form method="GET" action="{{ route('employee-salaries.index') }}" class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Employee</label>
-                <select id="employee-salary-employee-filter" name="employee_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select id="employee-salary-employee-filter" name="employee_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">All employees</option>
                     @foreach ($employees as $employee)
                         <option value="{{ $employee->id }}" @selected((string) ($filters['employee_id'] ?? '') === (string) $employee->id)>
@@ -29,7 +29,7 @@
             @include('partials.bs-date-selector', ['name' => 'to_date_bs', 'label' => 'To BS Date', 'value' => $filters['to_date_bs'] ?? null])
             <div>
                 <label class="block text-sm font-medium text-gray-700">Keyword</label>
-                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Employee, phone or month" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}" placeholder="Employee, phone or month" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
             <div class="flex items-center gap-3 md:pb-0.5">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Search</button>

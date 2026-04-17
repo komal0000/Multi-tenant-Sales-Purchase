@@ -11,7 +11,7 @@
             <div class="grid gap-4 md:grid-cols-4">
                 <div>
                     <label for="account_id" class="text-sm font-medium text-gray-700">Cash Account</label>
-                    <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <select id="account_id" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         <option value="">All cash accounts</option>
                         @foreach ($cashAccounts as $account)
                             <option value="{{ $account->id }}" @selected(($filters['account_id'] ?? '') === $account->id)>{{ $account->name }}</option>

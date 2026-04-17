@@ -11,7 +11,7 @@
             <div class="sales-purchase-report-filter-grid">
                 <div>
                     <label for="sales-report-party-filter" class="block text-sm font-medium text-gray-700">Party</label>
-                    <select id="sales-report-party-filter" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                    <select id="sales-report-party-filter" name="party_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                         <option value="">All parties</option>
                         @foreach ($parties as $party)
                             <option value="{{ $party->id }}" @selected((string) ($filters['party_id'] ?? '') === (string) $party->id)>{{ $party->name }}</option>

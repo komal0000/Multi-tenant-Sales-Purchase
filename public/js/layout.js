@@ -292,4 +292,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
         window.jQuery('select.select2').select2({ width: '100%' });
     }
+
+    // Safely scroll active sidebar items into view on load
+    setTimeout(() => {
+        const activeSidebarItems = document.querySelectorAll('aside .is-active');
+        activeSidebarItems.forEach((item) => {
+            const scrollContainer = item.closest('.overflow-y-auto');
+            if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const itemRect = item.getBoundingClientRect();
+
+                // If the item is not fully visible within the container viewport
+                if (itemRect.top < containerRect.top || itemRect.bottom > containerRect.bottom) {
+                    // Compute absolute center coordinate target
+                    const scrollTarget = scrollContainer.scrollTop + (itemRect.top - containerRect.top) - (containerRect.height / 2) + (itemRect.height / 2);
+                    
+                    scrollContainer.scrollTo({
+                        top: scrollTarget,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+    }, 150); // Delay ensures the browser layout computations have perfectly settled
 });

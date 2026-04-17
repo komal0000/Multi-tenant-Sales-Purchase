@@ -11,12 +11,12 @@
 
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Category Name</label>
-                <input id="name" name="name" type="text" value="{{ old('name', $category->name) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <input id="name" name="name" type="text" value="{{ old('name', $category->name) }}" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
             </div>
 
             <div>
                 <label for="parent_category_id" class="block text-sm font-medium text-gray-700">Parent Category</label>
-                <select id="parent_category_id" name="parent_category_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2">
+                <select id="parent_category_id" name="parent_category_id" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                     <option value="">No parent</option>
                     @foreach ($parentOptions as $parent)
                         <option value="{{ $parent->id }}" @selected((string) old('parent_category_id', old('parent_id', $category->parent_category_id)) === (string) $parent->id)>{{ $parent->name }}</option>

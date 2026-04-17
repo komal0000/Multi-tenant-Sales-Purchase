@@ -9,6 +9,7 @@
     <input type="hidden" name="{{ $name }}" :value="formattedDate">
 
     <div class="relative mt-1" @keydown.escape.window="closeCalendar()">
+        <div class="fixed inset-0 z-[140] bg-gray-900/40 sm:hidden" x-show="isOpen" x-transition.opacity @click="closeCalendar()" x-cloak></div>
         <div class="relative">
             <input
                 type="text"
@@ -17,7 +18,7 @@
                 @click="openCalendar()"
                 @input.debounce.200ms="handleInput()"
                 placeholder="YYYY-MM-DD"
-                class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm text-slate-700 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 pr-11 text-sm text-slate-700 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
             <button
                 type="button"
@@ -41,12 +42,12 @@
             <div class="bs-calendar-head">
                 <button type="button" class="bs-calendar-nav" @click="prevMonth()" aria-label="Previous month">&lt;</button>
                 <div class="bs-calendar-selectors">
-                    <select x-model="viewYear" @change="syncFromSelectors()" class="bs-calendar-select">
+                    <select x-model="viewYear" @change="syncFromSelectors()" class="bs-calendar-select py-1.5 text-sm">
                         <template x-for="yearOption in years" :key="yearOption">
                             <option :value="String(yearOption)" x-text="yearOption"></option>
                         </template>
                     </select>
-                    <select x-model="viewMonth" @change="syncFromSelectors()" class="bs-calendar-select">
+                    <select x-model="viewMonth" @change="syncFromSelectors()" class="bs-calendar-select py-1.5 text-sm">
                         <template x-for="monthOption in 12" :key="monthOption">
                             <option :value="pad(monthOption)" x-text="monthLabel(monthOption)"></option>
                         </template>

@@ -137,14 +137,14 @@
                         </div>
                         <div>
                             <label for="quick_payment_type" class="block text-sm font-medium text-gray-700">Direction</label>
-                            <select id="quick_payment_type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                            <select id="quick_payment_type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" @disabled(! $hasAccounts)>
                                 <option value="received" @selected($currentBalance >= 0)>Received</option>
                                 <option value="given" @selected($currentBalance < 0)>Given</option>
                             </select>
                         </div>
                         <div>
                             <label for="quick_payment_account" class="block text-sm font-medium text-gray-700">Account</label>
-                            <select id="quick_payment_account" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                            <select id="quick_payment_account" name="account_id" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" @disabled(! $hasAccounts)>
                                 @unless($hasAccounts)
                                     <option value="">No account available</option>
                                 @endunless
@@ -155,17 +155,17 @@
                         </div>
                         <div>
                             <label for="quick_payment_amount" class="block text-sm font-medium text-gray-700">Amount</label>
-                            <input id="quick_payment_amount" name="amount" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" @disabled(! $hasAccounts)>
+                            <input id="quick_payment_amount" name="amount" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" @disabled(! $hasAccounts)>
                         </div>
                         <div>
                             <label for="quick_payment_cheque" class="block text-sm font-medium text-gray-700">Cheque Number</label>
-                            <input id="quick_payment_cheque" name="cheque_number" type="text" maxlength="50" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
+                            <input id="quick_payment_cheque" name="cheque_number" type="text" maxlength="50" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
                         </div>
                     </div>
 
                     <div>
                         <label for="quick_payment_notes" class="block text-sm font-medium text-gray-700">Notes</label>
-                        <input id="quick_payment_notes" name="notes" type="text" maxlength="255" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
+                        <input id="quick_payment_notes" name="notes" type="text" maxlength="255" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" placeholder="Optional" @disabled(! $hasAccounts)>
                     </div>
 
                     <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

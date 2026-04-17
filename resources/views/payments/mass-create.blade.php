@@ -69,7 +69,7 @@
 
                             <tr class="border-t border-indigo-100 bg-indigo-50/40">
                                 <td class="px-4 py-3">
-                                    <select x-model="draftRow.party_id" x-ref="draftParty" @keydown.enter.prevent="focus('draftAccount')" class="w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                                    <select x-model="draftRow.party_id" x-ref="draftParty" @keydown.enter.prevent="focus('draftAccount')" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                                         <option value="">Select party</option>
                                         @foreach ($parties as $party)
                                             <option value="{{ $party->id }}">{{ $party->name }}</option>
@@ -77,7 +77,7 @@
                                     </select>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <select x-model="draftRow.account_id" x-ref="draftAccount" @keydown.enter.prevent="focus('draftAmount')" class="w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                                    <select x-model="draftRow.account_id" x-ref="draftAccount" @keydown.enter.prevent="focus('draftAmount')" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                                         <option value="">Select account</option>
                                         @foreach ($accounts as $account)
                                             <option value="{{ $account->id }}">{{ $account->name }} ({{ ucfirst($account->type) }})</option>
@@ -85,10 +85,10 @@
                                     </select>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input x-model.number="draftRow.amount" x-ref="draftAmount" @keydown.enter.prevent="focus('draftNotes')" type="number" step="0.01" min="0.01" class="w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="0.00">
+                                    <input x-model.number="draftRow.amount" x-ref="draftAmount" @keydown.enter.prevent="focus('draftNotes')" type="number" step="0.01" min="0.01" class="w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="0.00">
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input x-model="draftRow.notes" x-ref="draftNotes" @keydown.enter.prevent="commitRow" type="text" maxlength="255" class="w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Notes">
+                                    <input x-model="draftRow.notes" x-ref="draftNotes" @keydown.enter.prevent="commitRow" type="text" maxlength="255" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Notes">
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <button type="button" @click="commitRow" class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-semibold text-white hover:bg-indigo-700">+</button>

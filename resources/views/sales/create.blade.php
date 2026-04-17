@@ -76,7 +76,7 @@
                             <label for="sale-party-select" class="text-sm font-semibold text-gray-700">Party</label>
                             <button type="button" data-open-quick-party-entry data-party-select-id="sale-party-select" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">+ Quick Add</button>
                         </div>
-                        <select id="sale-party-select" name="party_id" x-model="partyId" x-ref="party" @keydown.enter.prevent="focus('itemType')" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" required>
+                        <select id="sale-party-select" name="party_id" x-model="partyId" x-ref="party" @keydown.enter.prevent="focus('itemType')" class="select2 mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" required>
                             <option value="">Select party</option>
                             @foreach ($parties as $party)
                                 <option value="{{ $party->id }}">{{ $party->name }}</option>
@@ -101,14 +101,14 @@
                 <div class="grid grid-cols-12 gap-2 border-b border-gray-300 bg-gray-50 px-4 py-3">
                     <div class="col-span-6 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Line Type</label>
-                        <select x-model="draftItem.line_type" x-ref="itemType" @change="onDraftLineTypeChanged" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <select x-model="draftItem.line_type" x-ref="itemType" @change="onDraftLineTypeChanged" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                             <option value="item">Item</option>
                             <option value="general">General</option>
                         </select>
                     </div>
                     <div class="col-span-12 md:col-span-3" x-show="draftItem.line_type === 'item'" x-cloak>
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Item</label>
-                        <select x-model="draftItem.item_id" x-ref="itemSelect" @change="onDraftItemSelected" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <select x-model="draftItem.item_id" x-ref="itemSelect" @change="onDraftItemSelected" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                             <option value="">Select item</option>
                             @foreach ($itemCatalog as $catalogItem)
                                 <option value="{{ $catalogItem['id'] }}">{{ $catalogItem['name'] }} (Stock: {{ number_format($catalogItem['qty'], 4) }})</option>
@@ -117,19 +117,19 @@
                     </div>
                     <div class="col-span-12 md:col-span-3" x-show="draftItem.line_type === 'general'" x-cloak>
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Description</label>
-                        <input x-model="draftItem.description" x-ref="itemDescription" @keydown.enter.prevent="focus('itemQty')" enterkeyhint="next" type="text" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Custom particular">
+                        <input x-model="draftItem.description" x-ref="itemDescription" @keydown.enter.prevent="focus('itemQty')" enterkeyhint="next" type="text" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Custom particular">
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Qty</label>
-                        <input x-model.number="draftItem.qty" x-ref="itemQty" @input="onDraftQtyChanged" @keydown.enter.prevent="focus('itemRate')" enterkeyhint="next" type="number" step="0.0001" min="0.0001" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input x-model.number="draftItem.qty" x-ref="itemQty" @input="onDraftQtyChanged" @keydown.enter.prevent="focus('itemRate')" enterkeyhint="next" type="number" step="0.0001" min="0.0001" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Rate</label>
-                        <input x-model.number="draftItem.rate" x-ref="itemRate" @input="updateDraftItemFromRate" @keydown.enter.prevent="focus('itemTotal')" enterkeyhint="next" type="number" step="0.0001" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input x-model.number="draftItem.rate" x-ref="itemRate" @input="updateDraftItemFromRate" @keydown.enter.prevent="focus('itemTotal')" enterkeyhint="next" type="number" step="0.0001" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Total</label>
-                        <input x-model.number="draftItem.total" x-ref="itemTotal" @input="updateDraftItemFromTotal" @keydown.enter.prevent="commitItem" enterkeyhint="done" type="number" step="0.01" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm font-mono text-gray-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input x-model.number="draftItem.total" x-ref="itemTotal" @input="updateDraftItemFromTotal" @keydown.enter.prevent="commitItem" enterkeyhint="done" type="number" step="0.01" min="0" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm font-mono text-gray-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div class="col-span-12 md:col-span-1 md:flex md:items-end">
                         <button type="button" @click="commitItem" class="mt-1 w-full rounded bg-indigo-600 px-2 py-2 text-sm font-semibold text-white hover:bg-indigo-700">ADD</button>
@@ -179,7 +179,7 @@
                 <div class="grid grid-cols-12 gap-2 border-b border-gray-300 bg-gray-50 px-4 py-3">
                     <div class="col-span-6 md:col-span-4">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Payment Via</label>
-                        <select x-model="draftPayment.account_id" x-ref="paymentAccount" @keydown.enter.prevent="focus('paymentAmount')" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" @disabled(! $hasAccounts)>
+                        <select x-model="draftPayment.account_id" x-ref="paymentAccount" @keydown.enter.prevent="focus('paymentAmount')" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" @disabled(! $hasAccounts)>
                             @if (! $defaultCashAccountId)
                                 <option value="">Select account</option>
                             @endif
@@ -190,11 +190,11 @@
                     </div>
                     <div class="col-span-6 md:col-span-3">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Payment Amount</label>
-                        <input x-model.number="draftPayment.amount" x-ref="paymentAmount" @keydown.enter.prevent="focus('paymentCheque')" enterkeyhint="next" type="number" step="0.01" min="0.01" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="0.00">
+                        <input x-model.number="draftPayment.amount" x-ref="paymentAmount" @keydown.enter.prevent="focus('paymentCheque')" enterkeyhint="next" type="number" step="0.01" min="0.01" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="0.00">
                     </div>
                     <div class="col-span-8 md:col-span-3">
                         <label class="text-xs font-semibold uppercase tracking-wide text-gray-600">Cheque Number</label>
-                        <input x-model="draftPayment.cheque_number" x-ref="paymentCheque" @keydown.enter.prevent="commitPayment" enterkeyhint="done" type="text" maxlength="50" class="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
+                        <input x-model="draftPayment.cheque_number" x-ref="paymentCheque" @keydown.enter.prevent="commitPayment" enterkeyhint="done" type="text" maxlength="50" class="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
                     </div>
                     <div class="col-span-4 md:col-span-2">
                         <label class="text-xs font-semibold uppercase tracking-wide text-transparent">Action</label>

@@ -123,27 +123,27 @@
             const renderEditableRow = (row) => `
                 <tr class="border-t border-gray-100" data-loaded-row="1" data-row-id="${row.id}">
                     <td class="px-4 py-3">
-                        <select class="mass-type w-full rounded border border-gray-300 px-2 py-2 text-sm" ${!row.can_edit ? 'disabled' : ''}>
+                        <select class="mass-type w-full rounded border border-gray-300 px-2 py-1.5 text-sm" ${!row.can_edit ? 'disabled' : ''}>
                             ${typeOptions(row.type)}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <select class="mass-party-select mass-select2 w-full" data-placeholder="Select party" ${!row.can_edit ? 'disabled' : ''}>
+                        <select class="mass-party-select mass-select2 w-full py-1.5 text-sm" data-placeholder="Select party" ${!row.can_edit ? 'disabled' : ''}>
                             <option value="">Select party</option>
                             ${optionMarkup(partyOptions, row.party_id)}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <select class="mass-account-select mass-select2 w-full" data-placeholder="Select account" ${!row.can_edit || !hasAccounts ? 'disabled' : ''}>
+                        <select class="mass-account-select mass-select2 w-full py-1.5 text-sm" data-placeholder="Select account" ${!row.can_edit || !hasAccounts ? 'disabled' : ''}>
                             <option value="">Select account</option>
                             ${optionMarkup(accountOptions, row.account_id)}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="number" min="0.01" step="0.01" value="${escapeHtml(row.amount)}" class="mass-amount w-full rounded border border-gray-300 px-2 py-2 text-right" ${!row.can_edit ? 'disabled' : ''}>
+                        <input type="number" min="0.01" step="0.01" value="${escapeHtml(row.amount)}" class="mass-amount w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm" ${!row.can_edit ? 'disabled' : ''}>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="text" maxlength="255" value="${escapeHtml(row.notes || '')}" class="mass-notes w-full rounded border border-gray-300 px-2 py-2" ${!row.can_edit ? 'disabled' : ''}>
+                        <input type="text" maxlength="255" value="${escapeHtml(row.notes || '')}" class="mass-notes w-full rounded border border-gray-300 px-2 py-1.5 text-sm" ${!row.can_edit ? 'disabled' : ''}>
                     </td>
                     <td class="px-4 py-3 text-gray-500">${escapeHtml(row.linked_label)}</td>
                     <td class="px-4 py-3">
@@ -174,27 +174,27 @@
             const renderDraftRow = () => `
                 <tr class="border-t border-indigo-100 bg-indigo-50/40" data-draft-row="1">
                     <td class="px-4 py-3">
-                        <select class="draft-type w-full rounded border border-gray-300 px-2 py-2 text-sm" ${!hasAccounts ? 'disabled' : ''}>
+                        <select class="draft-type w-full rounded border border-gray-300 px-2 py-1.5 text-sm" ${!hasAccounts ? 'disabled' : ''}>
                             ${typeOptions('received')}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <select class="draft-party mass-select2 w-full" data-placeholder="Select party" ${!hasAccounts ? 'disabled' : ''}>
+                        <select class="draft-party mass-select2 w-full py-1.5 text-sm" data-placeholder="Select party" ${!hasAccounts ? 'disabled' : ''}>
                             <option value="">Select party</option>
                             ${optionMarkup(partyOptions, '')}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <select class="draft-account mass-select2 w-full" data-placeholder="Select account" ${!hasAccounts ? 'disabled' : ''}>
+                        <select class="draft-account mass-select2 w-full py-1.5 text-sm" data-placeholder="Select account" ${!hasAccounts ? 'disabled' : ''}>
                             <option value="">Select account</option>
                             ${optionMarkup(accountOptions, '')}
                         </select>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="number" min="0.01" step="0.01" class="draft-amount w-full rounded border border-gray-300 px-2 py-2 text-right" placeholder="0.00" ${!hasAccounts ? 'disabled' : ''}>
+                        <input type="number" min="0.01" step="0.01" class="draft-amount w-full rounded border border-gray-300 px-2 py-1.5 text-right text-sm" placeholder="0.00" ${!hasAccounts ? 'disabled' : ''}>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="text" maxlength="255" class="draft-notes w-full rounded border border-gray-300 px-2 py-2" placeholder="Notes" ${!hasAccounts ? 'disabled' : ''}>
+                        <input type="text" maxlength="255" class="draft-notes w-full rounded border border-gray-300 px-2 py-1.5 text-sm" placeholder="Notes" ${!hasAccounts ? 'disabled' : ''}>
                     </td>
                     <td class="px-4 py-3 text-gray-500">New</td>
                     <td class="px-4 py-3 text-right">

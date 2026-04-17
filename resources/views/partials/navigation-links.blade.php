@@ -19,7 +19,7 @@
                     @foreach ($sectionItems as $item)
                         <a
                             href="{{ route($item['route']) }}"
-                            class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs($item['active']) ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600' }}"
+                            class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs($item['active']) ? 'bg-indigo-50 text-indigo-700 is-active' : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600' }}"
                         >
                             <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg {{ request()->routeIs($item['active']) ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500' }}">
                                 @include('partials.nav-icon', ['name' => $item['icon'] ?? 'dashboard', 'class' => 'h-4 w-4'])
