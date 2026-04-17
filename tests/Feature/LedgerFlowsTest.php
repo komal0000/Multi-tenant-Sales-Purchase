@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Helpers\DateHelper;
 use App\Models\Account;
+use App\Models\Employee;
 use App\Models\ExpenseCategory;
 use App\Models\Item;
 use App\Models\ItemLedger;
@@ -651,6 +652,53 @@ class LedgerFlowsTest extends TestCase
         $response->assertViewHas('totalReceivable', 200.0);
         $response->assertViewHas('totalPayable', 300.0);
         $this->assertSame(2, Ledger::query()->where('type', 'opening_balance')->count());
+    }
+
+    public function test_dashboard_totals_exclude_employee_linked_party_balances(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $customerParty = Party::query()->create([
+            'name' => 'Customer Party',
+            'phone' => null,
+            'opening_balance' => 200,
+            'opening_balance_side' => 'dr',
+        ]);
+
+        $employeeParty = Party::query()->create([
+            'name' => 'Employee Party',
+            'phone' => null,
+        ]);
+
+        Employee::query()->create([
+            'party_id' => $employeeParty->id,
+            'salary' => 5000,
+        ]);
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        app(PaymentService::class)->create([
+            'party_id' => $employeeParty->id,
+            'amount' => 5000,
+            'type' => 'given',
+            'account_id' => $cash->id,
+            'sale_id' => null,
+            'purchase_id' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('totalReceivable', 200.0);
+        $response->assertViewHas('totalPayable', 0.0);
+        $this->assertSame(5000.0, app(LedgerService::class)->partyBalance((string) $employeeParty->id));
+        $this->assertSame(200.0, app(LedgerService::class)->partyBalance((string) $customerParty->id));
     }
 
     public function test_sales_index_hides_cancelled_sales_unless_requested(): void

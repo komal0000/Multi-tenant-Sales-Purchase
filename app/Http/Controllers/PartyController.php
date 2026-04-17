@@ -166,11 +166,14 @@ class PartyController extends Controller
             ->orderBy('name')
             ->get();
 
+        $currentBalance = (float) $this->ledger->partyBalance($party->id);
+
         return view('parties.ledger', [
             'party' => $party,
             'ledgerRows' => $ledgerRows,
             'openingBalance' => (float) $openingBalance,
-            'currentBalance' => $this->ledger->partyBalance($party->id),
+            'currentBalance' => $currentBalance,
+            'quickPaymentDefaultType' => $this->quickPaymentDefaultType($party, $currentBalance),
             'accounts' => $accounts,
             'hasAccounts' => $accounts->isNotEmpty(),
             'defaultCashAccountId' => $accounts->firstWhere('type', 'cash')?->id,
@@ -205,6 +208,21 @@ class PartyController extends Controller
     private function openingSigned(float $amount, string $side): float
     {
         return $side === 'cr' ? -$amount : $amount;
+    }
+
+    private function quickPaymentDefaultType(Party $party, float $currentBalance): string
+    {
+        $epsilon = 0.00001;
+
+        if ($currentBalance < -$epsilon) {
+            return 'given';
+        }
+
+        if ($currentBalance > $epsilon) {
+            return 'received';
+        }
+
+        return $party->employees()->exists() ? 'given' : 'received';
     }
 
     public function destroy(Party $party): RedirectResponse

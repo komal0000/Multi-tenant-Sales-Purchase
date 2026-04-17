@@ -7,6 +7,7 @@ use App\Http\Requests\StoreMassPaymentRowRequest;
 use App\Http\Requests\StorePaymentRequest;
 use App\Models\Account;
 use App\Models\Ledger;
+use App\Models\Party;
 use App\Models\Payment;
 use App\Models\PayrollSetting;
 use App\Models\Purchase;
@@ -135,12 +136,23 @@ class PaymentController extends Controller
             ? Purchase::query()->with('party')->where('status', Purchase::STATUS_ACTIVE)->find($purchaseId)
             : null;
         $selectedPartyId = old('party_id', $request->string('party_id')->toString() ?: ($sale?->party_id ?? $purchase?->party_id));
-        $selectedType = old(
-            'type',
-            $sale
-                ? 'received'
-                : ($purchase ? 'given' : ($request->string('type')->toString() ?: 'received'))
-        );
+        $selectedType = old('type');
+
+        if ($selectedType === null) {
+            if ($sale) {
+                $selectedType = 'received';
+            } elseif ($purchase) {
+                $selectedType = 'given';
+            } else {
+                $requestedType = $request->string('type')->toString();
+                $selectedType = filled($requestedType)
+                    ? $requestedType
+                    : $this->defaultStandaloneDirectionForParty(
+                        filled($selectedPartyId) ? (int) $selectedPartyId : null
+                    );
+            }
+        }
+
         $selectedDateBs = old('date_bs', $request->string('date_bs')->toString() ?: DateHelper::getCurrentBS());
         $accounts = $this->orderedAccounts();
         $defaultCashAccountId = $accounts->firstWhere('type', 'cash')?->id;
@@ -480,7 +492,7 @@ class PaymentController extends Controller
             'balance' => $balance,
             'formatted_amount' => number_format(abs($balance), 2),
             'label' => $balance > 0 ? 'Receivable' : ($balance < 0 ? 'Payable' : 'Settled'),
-            'direction' => $balance < 0 ? 'given' : 'received',
+            'direction' => $this->defaultStandaloneDirectionForParty((int) $validated['party_id'], $balance),
             'tone' => $balance > 0 ? 'positive' : ($balance < 0 ? 'negative' : 'neutral'),
             'sidebar_limit' => $sidebarLimit,
             'recent_entries' => $recentEntries->map(fn (Ledger $entry) => [
@@ -513,6 +525,31 @@ class PaymentController extends Controller
             'overtime_money_per_day' => 0,
             'payment_sidebar_limit' => 10,
         ])->payment_sidebar_limit ?? 10);
+    }
+
+    private function defaultStandaloneDirectionForParty(?int $partyId, ?float $balance = null): string
+    {
+        if (! $partyId) {
+            return 'received';
+        }
+
+        $currentBalance = $balance ?? (float) $this->ledger->partyBalance((string) $partyId);
+        $epsilon = 0.00001;
+
+        if ($currentBalance < -$epsilon) {
+            return 'given';
+        }
+
+        if ($currentBalance > $epsilon) {
+            return 'received';
+        }
+
+        $isEmployeeParty = Party::query()
+            ->whereKey($partyId)
+            ->whereHas('employees')
+            ->exists();
+
+        return $isEmployeeParty ? 'given' : 'received';
     }
 
     private function ensureStandaloneMassPayment(Payment $payment): void

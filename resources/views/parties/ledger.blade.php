@@ -138,8 +138,8 @@
                         <div>
                             <label for="quick_payment_type" class="block text-sm font-medium text-gray-700">Direction</label>
                             <select id="quick_payment_type" name="type" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" @disabled(! $hasAccounts)>
-                                <option value="received" @selected($currentBalance >= 0)>Received</option>
-                                <option value="given" @selected($currentBalance < 0)>Given</option>
+                                <option value="received" @selected($quickPaymentDefaultType === 'received')>Received</option>
+                                <option value="given" @selected($quickPaymentDefaultType === 'given')>Given</option>
                             </select>
                         </div>
                         <div>

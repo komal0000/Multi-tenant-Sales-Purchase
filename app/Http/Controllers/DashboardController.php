@@ -17,7 +17,9 @@ class DashboardController extends Controller
     {
         app(LedgerService::class)->ensureCompatibilitySchema();
 
-        $parties = Party::query()->get(['id', 'opening_balance', 'opening_balance_side']);
+        $parties = Party::query()
+            ->whereDoesntHave('employees')
+            ->get(['id']);
         $partyLedgerBalances = Ledger::query()
             ->whereNotNull('party_id')
             ->selectRaw('party_id, COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance')

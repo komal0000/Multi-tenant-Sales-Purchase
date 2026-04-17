@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Ledger;
 use App\Models\Party;
 use App\Models\PayrollSetting;
@@ -279,7 +280,7 @@ class PartyQuickEntryTest extends TestCase
         $this->assertTrue($cachedParties->contains(fn (Party $cachedParty) => $cachedParty->id === $party->id));
     }
 
-    public function test_parties_index_renders_inline_entry_controls(): void
+    public function test_parties_index_uses_quick_add_modal_trigger(): void
     {
         /** @var User $user */
         $user = User::factory()->create();
@@ -290,14 +291,56 @@ class PartyQuickEntryTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('id="party-inline-entry-row"', false)
-            ->assertSee('id="party-inline-name"', false)
-            ->assertSee('id="party-inline-opening-balance"', false)
-            ->assertSee('id="party-inline-opening-balance-side"', false)
-            ->assertSee('Receivable', false)
-            ->assertSee('Payable', false)
-            ->assertSee('id="party-inline-save"', false)
+            ->assertDontSee('id="party-inline-entry-row"', false)
+            ->assertSee('data-open-quick-party-entry', false)
             ->assertSee('data-party-post-save="reload"', false);
+    }
+
+    public function test_employee_party_balance_endpoint_defaults_settled_advances_to_given(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Employee Advance Party',
+            'phone' => null,
+        ]);
+
+        Employee::query()->create([
+            'party_id' => $party->id,
+            'salary' => 1200,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('payments.party-balance', ['party_id' => $party->id]))
+            ->assertOk()
+            ->assertJson(fn ($json) => $json
+                ->where('balance', 0)
+                ->where('label', 'Settled')
+                ->where('direction', 'given')
+                ->etc()
+            );
+    }
+
+    public function test_employee_party_ledger_quick_payment_defaults_to_given_for_settled_balance(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $party = Party::query()->create([
+            'name' => 'Employee Quick Payment Party',
+            'phone' => null,
+        ]);
+
+        Employee::query()->create([
+            'party_id' => $party->id,
+            'salary' => 2000,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parties.ledger', $party))
+            ->assertOk()
+            ->assertSee('option value="given" selected', false);
     }
 
     public function test_quick_party_entry_accepts_phone_longer_than_ten_digits(): void

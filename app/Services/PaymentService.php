@@ -49,7 +49,7 @@ class PaymentService
                 }
             }
 
-            $payment = Payment::query()->create([
+            $attributes = [
                 'party_id' => $data['party_id'],
                 'amount' => $data['amount'],
                 'type' => $data['type'],
@@ -59,9 +59,18 @@ class PaymentService
                 'purchase_id' => $data['purchase_id'] ?: null,
                 'notes' => $data['notes'] ?? null,
                 'date' => (int) ($data['date'] ?? DateHelper::currentBsInt()),
-                'created_at' => $data['created_at'] ?? null,
-                'updated_at' => $data['updated_at'] ?? null,
-            ]);
+            ];
+
+            // Keep Eloquent timestamp defaults unless an explicit non-empty value is provided.
+            if (! empty($data['created_at'])) {
+                $attributes['created_at'] = $data['created_at'];
+            }
+
+            if (! empty($data['updated_at'])) {
+                $attributes['updated_at'] = $data['updated_at'];
+            }
+
+            $payment = Payment::query()->create($attributes);
 
             $this->ledger->recordPayment($payment);
 
@@ -86,7 +95,7 @@ class PaymentService
                 'cheque_number' => $data['cheque_number'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'date' => (int) ($data['date'] ?? $payment->date),
-                'created_at' => $data['created_at'] ?? $payment->created_at,
+                'created_at' => $data['created_at'] ?? $payment->created_at ?? now(),
                 'updated_at' => $data['updated_at'] ?? now(),
             ])->save();
 
