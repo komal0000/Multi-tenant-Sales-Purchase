@@ -7,6 +7,12 @@
                 <div>
                     <h1 class="text-2xl font-semibold text-gray-900">{{ $account->name }}</h1>
                     <p class="mt-1 text-sm capitalize text-gray-500">Type: {{ $account->type }}</p>
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <a href="{{ route('accounts.ledger', $account) }}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">View Ledger Statement</a>
+                        @can('update', $account)
+                            <a href="{{ route('accounts.edit', $account) }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Edit Account</a>
+                        @endcan
+                    </div>
                 </div>
                 @include('partials.balance-badge', ['balance' => $balance])
             </div>
@@ -42,10 +48,6 @@
                 </div>
                 <button type="submit" class="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Update Opening Balance</button>
             </form>
-            <div class="mt-6">
-                <a href="{{ route('accounts.ledger', $account) }}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">View Ledger Statement</a>
-            </div>
         </div>
     </div>
 @endsection
-

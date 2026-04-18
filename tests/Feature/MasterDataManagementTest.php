@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Helpers\DateHelper;
 use App\Models\Account;
 use App\Models\Employee;
+use App\Models\EmployeeSalary;
 use App\Models\ExpenseCategory;
 use App\Models\Item;
 use App\Models\ItemLedger;
+use App\Models\Ledger;
 use App\Models\Party;
+use App\Models\Payment;
 use App\Models\PayrollSetting;
 use App\Models\User;
 use App\Services\LedgerService;
@@ -258,6 +261,244 @@ class MasterDataManagementTest extends TestCase
             ->assertSee('printAccountLedgerTable()', false)
             ->assertSee('account-ledger-print-table', false)
             ->assertDontSee('window.print()', false);
+    }
+
+    public function test_account_pages_render_edit_and_delete_actions(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
+
+        $account = Account::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Editable Cash',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('accounts.index'))
+            ->assertOk()
+            ->assertSee(route('accounts.edit', $account), false)
+            ->assertSee(route('accounts.destroy', $account), false);
+
+        $this->actingAs($admin)
+            ->get(route('accounts.show', $account))
+            ->assertOk()
+            ->assertSee('Edit Account')
+            ->assertSee(route('accounts.edit', $account), false);
+    }
+
+    public function test_user_can_edit_unused_account_name_and_type(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $account = Account::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Original Account',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.edit', $account))
+            ->assertOk()
+            ->assertSee('Edit Account')
+            ->assertSee('Original Account');
+
+        $this->actingAs($user)
+            ->patch(route('accounts.update', $account), [
+                'name' => 'Updated Account',
+                'type' => 'bank',
+            ])
+            ->assertRedirect(route('accounts.show', $account))
+            ->assertSessionHas('success', 'Account updated successfully.');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'name' => 'Updated Account',
+            'type' => 'bank',
+        ]);
+    }
+
+    public function test_account_type_change_is_blocked_after_external_usage(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $account = Account::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Used Account',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Used Account Party',
+        ]);
+
+        Payment::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'party_id' => $party->id,
+            'amount' => 50,
+            'type' => 'received',
+            'account_id' => $account->id,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('accounts.edit', $account))
+            ->patch(route('accounts.update', $account), [
+                'name' => 'Used Account Renamed',
+                'type' => 'bank',
+            ])
+            ->assertRedirect(route('accounts.edit', $account))
+            ->assertSessionHasErrors('type');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+            'name' => 'Used Account',
+            'type' => 'cash',
+        ]);
+    }
+
+    public function test_admin_can_delete_unused_account_and_remove_its_opening_balance_ledger(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
+
+        $account = Account::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Delete Me Cash',
+            'type' => 'cash',
+            'opening_balance' => 1000,
+            'opening_balance_side' => 'dr',
+            'opening_balance_date' => DateHelper::currentBsInt(),
+        ]);
+
+        app(LedgerService::class)->syncAccountOpeningBalance($account);
+
+        $this->assertDatabaseHas('ledger', [
+            'account_id' => $account->id,
+            'type' => 'opening_balance',
+            'ref_table' => 'accounts',
+            'ref_id' => $account->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('accounts.destroy', $account))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('success', 'Account deleted successfully.');
+
+        $this->assertDatabaseMissing('accounts', [
+            'id' => $account->id,
+        ]);
+
+        $this->assertDatabaseMissing('ledger', [
+            'account_id' => $account->id,
+            'type' => 'opening_balance',
+            'ref_table' => 'accounts',
+            'ref_id' => $account->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_account_with_payment_history(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
+
+        $account = Account::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Payment History Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Payment History Party',
+        ]);
+
+        Payment::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'party_id' => $party->id,
+            'amount' => 75,
+            'type' => 'received',
+            'account_id' => $account->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('accounts.destroy', $account))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'This account has payment history and cannot be deleted.');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_account_with_non_opening_ledger_history(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
+
+        $account = Account::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Ledger History Cash',
+            'type' => 'cash',
+        ]);
+
+        Ledger::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'party_id' => null,
+            'account_id' => $account->id,
+            'dr_amount' => 50,
+            'cr_amount' => 0,
+            'type' => 'payment',
+            'ref_id' => 999,
+            'ref_table' => 'payments',
+            'date' => DateHelper::currentBsInt(),
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('accounts.destroy', $account))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'This account has ledger history and cannot be deleted.');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_account_used_in_employee_salary(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create(['role' => 0]);
+
+        $account = Account::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'name' => 'Salary Cash',
+            'type' => 'cash',
+        ]);
+
+        EmployeeSalary::query()->create([
+            'tenant_id' => $admin->tenant_id,
+            'employee_name' => 'Salary User',
+            'salary_date' => now()->toDateString(),
+            'salary_month' => now()->format('Y-m'),
+            'basic_salary' => 1000,
+            'allowance' => 0,
+            'deduction' => 0,
+            'leave_days' => 0,
+            'overtime_days' => 0,
+            'net_salary' => 1000,
+            'account_id' => $account->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('accounts.destroy', $account))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'This account is linked to employee salary records and cannot be deleted.');
+
+        $this->assertDatabaseHas('accounts', [
+            'id' => $account->id,
+        ]);
     }
 
     public function test_successful_sale_store_redirects_back_to_create_page(): void

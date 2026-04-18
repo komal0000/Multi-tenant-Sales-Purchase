@@ -58,7 +58,16 @@
                             <tr class="border-t border-gray-100 hover:bg-gray-50/80">
                                 <td class="px-5 py-4 font-medium text-gray-900"><a href="{{ route('sales.show', $sale) }}" class="hover:text-indigo-600">{{ $sale->party->name }}</a></td>
                                 <td class="px-5 py-4 text-right font-mono font-semibold text-indigo-700">{{ number_format($sale->total, 2) }}</td>
-                                <td class="px-5 py-4 text-right font-mono {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">{{ number_format($sale->received_amount, 2) }}</td>
+                                <td class="px-5 py-4 text-right">
+                                    <div class="font-mono {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">{{ number_format($sale->received_amount, 2) }}</div>
+                                    @if ($sale->advance_received_amount > 0)
+                                        <div class="mt-1 text-xs font-medium text-amber-600">Advance {{ number_format($sale->advance_received_amount, 2) }}</div>
+                                    @elseif ($sale->remaining_amount > 0)
+                                        <div class="mt-1 text-xs text-gray-500">Due {{ number_format($sale->remaining_amount, 2) }}</div>
+                                    @else
+                                        <div class="mt-1 text-xs font-medium text-emerald-600">Settled</div>
+                                    @endif
+                                </td>
                                 <td class="px-5 py-4 text-gray-500">{{ $sale->created_at->format('d M Y') }}</td>
                                 <td class="px-5 py-4 text-gray-500">{{ $sale->created_at_bs }}</td>
                                 <td class="px-5 py-4">
@@ -106,6 +115,13 @@
                         <div class="text-right">
                             <div class="font-mono text-sm font-semibold text-indigo-700">{{ number_format($sale->total, 2) }}</div>
                             <div class="mt-1 font-mono text-xs {{ $sale->received_amount > 0 ? 'text-green-600' : 'text-gray-500' }}">Paid {{ number_format($sale->received_amount, 2) }}</div>
+                            @if ($sale->advance_received_amount > 0)
+                                <div class="mt-1 text-xs font-medium text-amber-600">Advance {{ number_format($sale->advance_received_amount, 2) }}</div>
+                            @elseif ($sale->remaining_amount > 0)
+                                <div class="mt-1 text-xs text-gray-500">Due {{ number_format($sale->remaining_amount, 2) }}</div>
+                            @else
+                                <div class="mt-1 text-xs font-medium text-emerald-600">Settled</div>
+                            @endif
                             <div class="mt-2 text-xs font-medium {{ $sale->isCancelled() ? 'text-red-600' : 'text-emerald-600' }}">{{ $sale->isCancelled() ? 'Cancelled' : 'Active' }}</div>
                         </div>
                     </div>

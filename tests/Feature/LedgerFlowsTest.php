@@ -172,6 +172,250 @@ class LedgerFlowsTest extends TestCase
         $this->assertNull($purchasePayment->sale_id);
     }
 
+    public function test_sale_store_allows_overpayment_and_tracks_extra_as_party_advance(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'name' => 'Overpaid Sale Party',
+            'phone' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('sales.store'), [
+                'party_id' => $party->id,
+                'date_bs' => DateHelper::getCurrentBS(),
+                'items' => [
+                    [
+                        'line_type' => 'general',
+                        'description' => 'General sale line',
+                        'qty' => '1',
+                        'rate' => '100',
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'account_id' => $cash->id,
+                        'amount' => '150',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('sales.create'));
+
+        $sale = Sale::query()->latest('id')->with('payments')->firstOrFail();
+
+        $this->assertEqualsWithDelta(100.0, (float) $sale->total, 0.01);
+        $this->assertCount(1, $sale->payments);
+        $this->assertEqualsWithDelta(150.0, (float) $sale->payments->first()->amount, 0.01);
+        $this->assertSame($sale->id, $sale->payments->first()->sale_id);
+        $this->assertSame(-50.0, app(LedgerService::class)->partyBalance((string) $party->id));
+        $this->assertSame(150.0, app(LedgerService::class)->accountBalance((string) $cash->id));
+    }
+
+    public function test_purchase_store_allows_overpayment_and_tracks_extra_as_party_advance(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'name' => 'Overpaid Purchase Party',
+            'phone' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('purchases.store'), [
+                'party_id' => $party->id,
+                'date_bs' => DateHelper::getCurrentBS(),
+                'items' => [
+                    [
+                        'line_type' => 'general',
+                        'description' => 'General purchase line',
+                        'qty' => '1',
+                        'rate' => '100',
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'account_id' => $cash->id,
+                        'amount' => '150',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('purchases.create'));
+
+        $purchase = Purchase::query()->latest('id')->with('payments')->firstOrFail();
+
+        $this->assertEqualsWithDelta(100.0, (float) $purchase->total, 0.01);
+        $this->assertCount(1, $purchase->payments);
+        $this->assertEqualsWithDelta(150.0, (float) $purchase->payments->first()->amount, 0.01);
+        $this->assertSame($purchase->id, $purchase->payments->first()->purchase_id);
+        $this->assertSame(50.0, app(LedgerService::class)->partyBalance((string) $party->id));
+        $this->assertSame(-150.0, app(LedgerService::class)->accountBalance((string) $cash->id));
+    }
+
+    public function test_linked_sale_payment_can_overpay_after_bill_is_settled(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'name' => 'Later Overpaid Sale Party',
+            'phone' => null,
+        ]);
+
+        $sale = app(SaleService::class)->create([
+            'party_id' => $party->id,
+            'items' => [
+                [
+                    'line_type' => 'general',
+                    'description' => 'Sale bill',
+                    'qty' => 1,
+                    'rate' => 100,
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 100,
+                'type' => 'received',
+                'account_id' => $cash->id,
+                'sale_id' => $sale->id,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 50,
+                'type' => 'received',
+                'account_id' => $cash->id,
+                'sale_id' => $sale->id,
+            ])
+            ->assertRedirect();
+
+        $sale->refresh();
+        $this->assertEqualsWithDelta(150.0, (float) $sale->payments()->sum('amount'), 0.01);
+        $this->assertSame(-50.0, app(LedgerService::class)->partyBalance((string) $party->id));
+
+        $this->actingAs($user)
+            ->get(route('sales.show', $sale))
+            ->assertOk()
+            ->assertSee('Advance Received 50.00')
+            ->assertSee('Add Payment');
+    }
+
+    public function test_linked_purchase_payment_can_overpay_after_bill_is_settled(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $cash = Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $party = Party::query()->create([
+            'name' => 'Later Overpaid Purchase Party',
+            'phone' => null,
+        ]);
+
+        $purchase = app(PurchaseService::class)->create([
+            'party_id' => $party->id,
+            'items' => [
+                [
+                    'line_type' => 'general',
+                    'description' => 'Purchase bill',
+                    'qty' => 1,
+                    'rate' => 100,
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 100,
+                'type' => 'given',
+                'account_id' => $cash->id,
+                'purchase_id' => $purchase->id,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post(route('payments.store'), [
+                'party_id' => $party->id,
+                'amount' => 50,
+                'type' => 'given',
+                'account_id' => $cash->id,
+                'purchase_id' => $purchase->id,
+            ])
+            ->assertRedirect();
+
+        $purchase->refresh();
+        $this->assertEqualsWithDelta(150.0, (float) $purchase->payments()->sum('amount'), 0.01);
+        $this->assertSame(50.0, app(LedgerService::class)->partyBalance((string) $party->id));
+
+        $this->actingAs($user)
+            ->get(route('purchases.show', $purchase))
+            ->assertOk()
+            ->assertSee('Advance Given 50.00')
+            ->assertSee('Add Payment');
+    }
+
+    public function test_sale_create_page_shows_advance_received_footer_and_does_not_render_old_overpayment_warnings(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('sales.create'))
+            ->assertOk()
+            ->assertSee('Advance Received')
+            ->assertDontSee('Payment cannot exceed bill total.')
+            ->assertDontSee('Payment total cannot exceed bill total.');
+    }
+
+    public function test_purchase_create_page_shows_advance_given_footer_and_does_not_render_old_overpayment_warnings(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        Account::query()->create([
+            'name' => 'Cash',
+            'type' => 'cash',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('purchases.create'))
+            ->assertOk()
+            ->assertSee('Advance Given')
+            ->assertDontSee('Payment cannot exceed bill total.')
+            ->assertDontSee('Payment total cannot exceed bill total.');
+    }
+
     public function test_payment_delete_is_soft_delete_and_removes_ledger_entries(): void
     {
         $ledger = app(LedgerService::class);

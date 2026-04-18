@@ -14,7 +14,15 @@
                         {{ $purchase->isCancelled() ? 'Cancelled' : 'Active' }}
                     </span>
                     <p class="font-mono text-2xl font-semibold text-indigo-700">{{ number_format($purchase->total, 2) }}</p>
-                    @if (! $purchase->isCancelled() && $purchase->remaining_amount > 0)
+                    <p class="mt-2 text-sm text-gray-500">Paid {{ number_format($purchase->paid_amount, 2) }}</p>
+                    @if ($purchase->advance_given_amount > 0)
+                        <p class="mt-1 text-sm font-medium text-amber-600">Advance Given {{ number_format($purchase->advance_given_amount, 2) }}</p>
+                    @elseif ($purchase->remaining_amount > 0)
+                        <p class="mt-1 text-sm font-medium text-gray-600">Remaining Payable {{ number_format($purchase->remaining_amount, 2) }}</p>
+                    @else
+                        <p class="mt-1 text-sm font-medium text-emerald-600">Settled</p>
+                    @endif
+                    @if (! $purchase->isCancelled())
                         <a href="{{ route('payments.create', ['party_id' => $purchase->party_id, 'purchase_id' => $purchase->id]) }}" class="mt-3 inline-flex rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Add Payment</a>
                     @endif
                 </div>

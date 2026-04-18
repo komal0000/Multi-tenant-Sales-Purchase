@@ -43,7 +43,19 @@
                                     {{ number_format(abs($account->balance), 2) }}
                                 </td>
                                 <td class="px-5 py-4 text-right">
-                                    <a href="{{ route('accounts.ledger', $account) }}" class="text-sm text-indigo-600 hover:text-indigo-700">Ledger</a>
+                                    <div class="flex items-center justify-end gap-3">
+                                        <a href="{{ route('accounts.ledger', $account) }}" class="text-sm text-indigo-600 hover:text-indigo-700">Ledger</a>
+                                        @can('update', $account)
+                                            <a href="{{ route('accounts.edit', $account) }}" class="text-sm text-indigo-600 hover:text-indigo-700">Edit</a>
+                                        @endcan
+                                        @can('delete', $account)
+                                            <form action="{{ route('accounts.destroy', $account) }}" method="POST" onsubmit="return confirm('Delete this account? This is only allowed when the account has no usage history.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-sm text-red-500 hover:text-red-700">Delete</button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -69,7 +81,19 @@
                         </span>
                     </div>
                     <div class="mt-4 border-t border-gray-100 pt-3">
-                        <a href="{{ route('accounts.ledger', $account) }}" class="text-sm font-medium text-indigo-600">View Ledger</a>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('accounts.ledger', $account) }}" class="text-sm font-medium text-indigo-600">View Ledger</a>
+                            @can('update', $account)
+                                <a href="{{ route('accounts.edit', $account) }}" class="text-sm font-medium text-indigo-600">Edit</a>
+                            @endcan
+                            @can('delete', $account)
+                                <form action="{{ route('accounts.destroy', $account) }}" method="POST" onsubmit="return confirm('Delete this account? This is only allowed when the account has no usage history.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-sm font-medium text-red-500">Delete</button>
+                                </form>
+                            @endcan
+                        </div>
                     </div>
                 </div>
             @empty

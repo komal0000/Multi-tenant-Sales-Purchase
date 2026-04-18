@@ -242,6 +242,12 @@
                                 <td class="border border-gray-300 px-2 py-1"></td>
                                 <td class="border border-gray-300 px-2 py-1"></td>
                             </tr>
+                            <tr>
+                                <td class="border border-gray-300 px-2 py-1 text-right">Advance Received</td>
+                                <td class="border border-gray-300 px-2 py-1 text-right font-mono" x-text="money(advanceReceivedTotal())"></td>
+                                <td class="border border-gray-300 px-2 py-1"></td>
+                                <td class="border border-gray-300 px-2 py-1"></td>
+                            </tr>
                         </tfoot>
                     </table>
                 </div>
@@ -527,13 +533,6 @@
                         return;
                     }
 
-                    const nextPaymentTotal = this.paymentTotal() + amount;
-                    if (nextPaymentTotal > this.grandTotal()) {
-                        this.message = 'Payment cannot exceed bill total.';
-
-                        return;
-                    }
-
                     this.payments.push({
                         account_id: accountId,
                         amount,
@@ -558,7 +557,10 @@
                     return this.payments.reduce((sum, payment) => sum + this.toNumber(payment.amount), 0);
                 },
                 dueTotal() {
-                    return this.grandTotal() - this.paymentTotal();
+                    return Math.max(0, this.grandTotal() - this.paymentTotal());
+                },
+                advanceReceivedTotal() {
+                    return Math.max(0, this.paymentTotal() - this.grandTotal());
                 },
                 accountName(accountId) {
                     return this.accountLookup[accountId] || 'Unknown account';
@@ -580,11 +582,6 @@
                         this.focus('itemType');
 
                         return;
-                    }
-
-                    if (this.paymentTotal() > this.grandTotal()) {
-                        event.preventDefault();
-                        this.message = 'Payment total cannot exceed bill total.';
                     }
                 },
             };

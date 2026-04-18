@@ -64,6 +64,10 @@ class DestroyAuthorizationTest extends TestCase
         $this->actingAs($user)
             ->delete(route('payments.destroy', $payment))
             ->assertForbidden();
+
+        $this->actingAs($user)
+            ->delete(route('accounts.destroy', $account))
+            ->assertForbidden();
     }
 
     public function test_admin_can_delete_party(): void

@@ -100,6 +100,8 @@ class PurchaseController extends Controller
             $purchases->through(function (Purchase $purchase) {
                 $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date);
                 $purchase->paid_amount = (float) $purchase->payments->where('type', 'given')->sum('amount');
+                $purchase->remaining_amount = max(0, (float) $purchase->total - $purchase->paid_amount);
+                $purchase->advance_given_amount = max(0, $purchase->paid_amount - (float) $purchase->total);
 
                 return $purchase;
             });
@@ -159,15 +161,6 @@ class PurchaseController extends Controller
         $validated = $request->validated();
         $validated['date'] = DateHelper::toDateInt($validated['date_bs']);
 
-        $itemTotal = collect($validated['items'])->sum(fn (array $item) => (float) ($item['qty'] ?? 1) * (float) $item['rate']);
-        $paymentTotal = collect($validated['payments'] ?? [])->sum(fn (array $payment) => (float) $payment['amount']);
-
-        if ($paymentTotal > $itemTotal) {
-            throw ValidationException::withMessages([
-                'payments' => 'Payment total cannot be greater than bill total.',
-            ]);
-        }
-
         $this->service->create($validated);
 
         return redirect()
@@ -184,6 +177,7 @@ class PurchaseController extends Controller
         $purchase->created_at_bs = DateHelper::fromDateInt((int) $purchase->date);
         $purchase->paid_amount = (float) $purchase->payments()->where('type', 'given')->sum('amount');
         $purchase->remaining_amount = max(0, (float) $purchase->total - $purchase->paid_amount);
+        $purchase->advance_given_amount = max(0, $purchase->paid_amount - (float) $purchase->total);
 
         $linkedPayments = $purchase->payments()
             ->with('account')

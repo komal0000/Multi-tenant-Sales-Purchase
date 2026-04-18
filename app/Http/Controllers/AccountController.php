@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\DateHelper;
 use App\Models\Account;
+use App\Models\EmployeeSalary;
 use App\Models\Ledger;
 use App\Models\Payment;
 use App\Models\Purchase;
@@ -13,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -116,6 +118,45 @@ class AccountController extends Controller
         ]);
     }
 
+    public function edit(Account $account): View
+    {
+        $this->authorize('update', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
+
+        return view('accounts.edit', [
+            'account' => $account,
+            'canChangeType' => ! $this->hasExternalUsage($account),
+        ]);
+    }
+
+    public function update(Request $request, Account $account): RedirectResponse
+    {
+        $this->authorize('update', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:cash,bank'],
+        ]);
+
+        if ($validated['type'] !== $account->type && $this->hasExternalUsage($account)) {
+            throw ValidationException::withMessages([
+                'type' => 'Account type cannot be changed after the account has been used.',
+            ]);
+        }
+
+        $account->update([
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+        ]);
+
+        return redirect()
+            ->route('accounts.show', $account)
+            ->with('success', 'Account updated successfully.');
+    }
+
     public function ledgerStatement(Request $request, Account $account): View
     {
         $this->authorize('view', $account);
@@ -189,6 +230,33 @@ class AccountController extends Controller
         return redirect()
             ->route('accounts.show', $account)
             ->with('success', 'Opening balance updated successfully.');
+    }
+
+    public function destroy(Account $account): RedirectResponse
+    {
+        $this->authorize('delete', $account);
+        $this->ledger->ensureCompatibilitySchema();
+        $account->refresh();
+
+        $blockMessage = $this->accountDeleteBlockMessage($account);
+        if ($blockMessage !== null) {
+            return redirect()
+                ->route('accounts.index')
+                ->with('error', $blockMessage);
+        }
+
+        DB::table('ledger')
+            ->where('type', 'opening_balance')
+            ->where('ref_table', 'accounts')
+            ->where('ref_id', $account->id)
+            ->where('account_id', $account->id)
+            ->delete();
+
+        $account->delete();
+
+        return redirect()
+            ->route('accounts.index')
+            ->with('success', 'Account deleted successfully.');
     }
 
     private function attachReferenceText(Collection $ledgerRows): void
@@ -268,5 +336,35 @@ class AccountController extends Controller
     private function openingSigned(float $amount, string $side): float
     {
         return $side === 'cr' ? -$amount : $amount;
+    }
+
+    private function hasExternalUsage(Account $account): bool
+    {
+        return $this->accountDeleteBlockMessage($account) !== null;
+    }
+
+    private function accountDeleteBlockMessage(Account $account): ?string
+    {
+        if (Payment::withTrashed()->where('account_id', $account->id)->exists()) {
+            return 'This account has payment history and cannot be deleted.';
+        }
+
+        if (Ledger::query()
+            ->where('account_id', $account->id)
+            ->where(function ($query) use ($account) {
+                $query
+                    ->where('type', '!=', 'opening_balance')
+                    ->orWhere('ref_table', '!=', 'accounts')
+                    ->orWhere('ref_id', '!=', $account->id);
+            })
+            ->exists()) {
+            return 'This account has ledger history and cannot be deleted.';
+        }
+
+        if (EmployeeSalary::query()->where('account_id', $account->id)->exists()) {
+            return 'This account is linked to employee salary records and cannot be deleted.';
+        }
+
+        return null;
     }
 }
