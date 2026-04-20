@@ -797,4 +797,146 @@ class MasterDataManagementTest extends TestCase
             ->assertOk()
             ->assertSee('No cash or bank account is available yet.');
     }
+
+    public function test_sidebar_renders_separate_sales_entry_and_list_links(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('sales.create'))
+            ->assertOk()
+            ->assertSee(route('sales.create'), false)
+            ->assertSee(route('sales.index'), false)
+            ->assertSee('>Sales<', false)
+            ->assertSee('>List Sales<', false);
+    }
+
+    public function test_sales_create_page_renders_quick_item_and_contextual_quick_party_hooks(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        Item::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Demo Item',
+            'qty' => 0,
+            'rate' => 120,
+            'cost_price' => 90,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('sales.create'))
+            ->assertOk()
+            ->assertSee('Quick Add Item')
+            ->assertSee('id="sale-item-select"', false)
+            ->assertSee('aria-label="Add line">+</button>', false)
+            ->assertSee('data-quick-party-hide-opening="true"', false)
+            ->assertSee('sales-entry-line-type', false)
+            ->assertDontSee("addClass('mt-4')", false)
+            ->assertDontSee('(Stock:', false);
+    }
+
+    public function test_purchase_create_page_renders_quick_item_and_quick_expense_category_hooks(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        Item::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Purchase Item',
+            'qty' => 0,
+            'rate' => 120,
+            'cost_price' => 90,
+        ]);
+
+        ExpenseCategory::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Travel',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('purchases.create'))
+            ->assertOk()
+            ->assertSee('Quick Add Item')
+            ->assertSee('Quick Add Category')
+            ->assertSee('id="purchase-item-select"', false)
+            ->assertSee('id="purchase-expense-category-select"', false)
+            ->assertSee('aria-label="Add line">+</button>', false)
+            ->assertSee('data-quick-party-hide-opening="true"', false)
+            ->assertSee('purchase-entry-line-type', false)
+            ->assertDontSee('(Stock:', false);
+    }
+
+    public function test_sales_and_purchase_total_enter_key_uses_item_commit_and_return_hook(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('sales.create'))
+            ->assertOk()
+            ->assertSee('@keydown.enter.prevent="commitItemFromTotal()"', false);
+
+        $this->actingAs($user)
+            ->get(route('purchases.create'))
+            ->assertOk()
+            ->assertSee('@keydown.enter.prevent="commitItemFromTotal()"', false);
+    }
+
+    public function test_item_store_returns_json_payload_for_quick_add_requests(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson(route('items.store'), [
+                'name' => 'Quick Add Item',
+                'rate' => '350',
+                'cost_price' => '275',
+            ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('message', 'Item created successfully.')
+            ->assertJsonPath('item.name', 'Quick Add Item')
+            ->assertJsonPath('item.rate', 350)
+            ->assertJsonPath('item.cost_price', 275)
+            ->assertJsonPath('item.qty', 0);
+
+        $this->assertDatabaseHas('items', [
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Quick Add Item',
+            'qty' => 0,
+        ]);
+    }
+
+    public function test_expense_category_store_returns_json_payload_for_quick_add_requests(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+
+        $parent = ExpenseCategory::query()->create([
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Operations',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('expense-categories.store'), [
+                'name' => 'Fuel',
+                'parent_category_id' => $parent->id,
+            ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('message', 'Expense category created successfully.')
+            ->assertJsonPath('category.name', 'Fuel')
+            ->assertJsonPath('category.parent_category_id', $parent->id);
+
+        $this->assertDatabaseHas('expense_categories', [
+            'tenant_id' => $user->tenant_id,
+            'name' => 'Fuel',
+            'parent_id' => $parent->id,
+        ]);
+    }
 }

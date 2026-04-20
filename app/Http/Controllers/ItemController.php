@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\ItemLedger;
 use App\Services\LedgerService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -57,7 +58,7 @@ class ItemController extends Controller
         ]);
     }
 
-    public function store(StoreItemRequest $request): RedirectResponse
+    public function store(StoreItemRequest $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', Item::class);
         $this->ledger->ensureCompatibilitySchema();
@@ -73,6 +74,19 @@ class ItemController extends Controller
             'cost_price' => (float) $validated['cost_price'],
         ]);
         $this->ledger->syncItemOpeningStock($item, $openingQty);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Item created successfully.',
+                'item' => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'qty' => (float) $item->qty,
+                    'rate' => (float) $item->rate,
+                    'cost_price' => (float) $item->cost_price,
+                ],
+            ], 201);
+        }
 
         return redirect()
             ->route('items.index')

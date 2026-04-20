@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreExpenseCategoryRequest;
 use App\Http\Requests\UpdateExpenseCategoryRequest;
 use App\Models\BillLineItem;
-use App\Http\Requests\StoreExpenseCategoryRequest;
 use App\Models\ExpenseCategory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -22,12 +22,12 @@ class ExpenseCategoryController extends Controller
             'keyword' => ['nullable', 'string', 'max:255'],
         ]);
 
-        [$categoryTree, ] = $this->buildCategoryTreePayload();
+        [$categoryTree] = $this->buildCategoryTreePayload();
 
         $categories = ExpenseCategory::query()
             ->with('parent:id,name')
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
-                $term = '%' . trim((string) $keyword) . '%';
+                $term = '%'.trim((string) $keyword).'%';
 
                 $query->where(function ($subQuery) use ($term) {
                     $subQuery
@@ -68,7 +68,7 @@ class ExpenseCategoryController extends Controller
         ]);
     }
 
-    public function store(StoreExpenseCategoryRequest $request): RedirectResponse
+    public function store(StoreExpenseCategoryRequest $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', ExpenseCategory::class);
 
@@ -80,7 +80,18 @@ class ExpenseCategoryController extends Controller
             $parentColumn => $validated['parent_category_id'] ?? null,
         ];
 
-        ExpenseCategory::query()->create($payload);
+        $category = ExpenseCategory::query()->create($payload);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Expense category created successfully.',
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'parent_category_id' => $category->{$parentColumn},
+                ],
+            ], 201);
+        }
 
         return redirect()
             ->route('expense-categories.index')
@@ -170,9 +181,9 @@ class ExpenseCategoryController extends Controller
     }
 
     /**
-     * @param Collection<int, ExpenseCategory> $categories
-     * @param array<int, int> $path
-     * @param array<int, int> $orphanIds
+     * @param  Collection<int, ExpenseCategory>  $categories
+     * @param  array<int, int>  $path
+     * @param  array<int, int>  $orphanIds
      * @return array<int, array<string, mixed>>
      */
     private function serializeTreeNodes(Collection $categories, array $path, array $orphanIds): array

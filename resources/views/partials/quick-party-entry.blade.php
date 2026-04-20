@@ -28,10 +28,10 @@
                     <input id="quick_party_address" name="address" type="text" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" placeholder="Optional">
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-2">
+                <div id="quick-party-opening-fields" class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label for="quick_party_opening_balance" class="block text-sm font-medium text-gray-700">Opening Balance</label>
-                        <input id="quick_party_opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                        <input id="quick_party_opening_balance" name="opening_balance" type="number" min="0" step="0.01" value="0" data-disable-wheel-change class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
                     </div>
                     <div>
                         @include('partials.bs-date-selector', ['name' => 'opening_balance_date_bs', 'label' => 'Opening BS Date', 'value' => \App\Helpers\DateHelper::getCurrentBS()])
@@ -67,13 +67,15 @@
         const errorsBox = document.getElementById('quick-party-errors');
         const submitButton = document.getElementById('quick-party-submit');
         const phoneInput = document.getElementById('quick_party_phone');
+        const openingFields = document.getElementById('quick-party-opening-fields');
 
-        if (!modal || !form || !errorsBox || !submitButton || !phoneInput) {
+        if (!modal || !form || !errorsBox || !submitButton || !phoneInput || !openingFields) {
             return;
         }
 
         let targetSelectId = null;
         let postSaveAction = null;
+        let hideOpeningFields = false;
 
         const defaultState = {
             opening_balance: '0',
@@ -151,6 +153,23 @@
             phoneInput.value = '';
         }
 
+        function setOpeningFieldsVisibility(shouldHide) {
+            hideOpeningFields = shouldHide;
+            openingFields.classList.toggle('hidden', shouldHide);
+
+            openingFields.querySelectorAll('input, select, textarea, button').forEach((field) => {
+                if (!field.name) {
+                    return;
+                }
+
+                field.disabled = shouldHide;
+            });
+
+            if (shouldHide) {
+                resetForm();
+            }
+        }
+
         function formatPartyLabel(party) {
             const parts = [party.name];
 
@@ -201,6 +220,7 @@
         function openQuickEntry(trigger) {
             targetSelectId = trigger.getAttribute('data-party-select-id') || null;
             postSaveAction = trigger.getAttribute('data-party-post-save') || null;
+            setOpeningFieldsVisibility(trigger.getAttribute('data-quick-party-hide-opening') === 'true');
 
             clearErrors();
             setModalOpen(true);
@@ -211,6 +231,7 @@
             setModalOpen(false);
             targetSelectId = null;
             postSaveAction = null;
+            setOpeningFieldsVisibility(false);
         }
 
         document.addEventListener('click', (event) => {
@@ -234,6 +255,12 @@
             if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
                 closeQuickEntry();
             }
+        });
+
+        form.querySelectorAll('[data-disable-wheel-change]').forEach((input) => {
+            input.addEventListener('wheel', (event) => {
+                event.preventDefault();
+            }, { passive: false });
         });
 
         form.addEventListener('submit', async (event) => {
